@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="src/css/filter-bar.css" />
 <link rel="stylesheet" href="src/css/hero.css" />
 <link rel="stylesheet" href="src/css/reconciliation.css" />
+<link rel="stylesheet" href="src/css/session-explorer.css" />
 <script src="src/js/theme.js"></script>
 <script src="src/vendor/chart.umd.min.js"></script>
 <style>
@@ -189,7 +190,11 @@
       </div>
     </div>
 
-    <div class="card big" id="rhythmCard"></div>
+    <section aria-label="ZONE B · FLOW" id="zoneB">
+      <h2 style="margin:12px 0 8px">ZONE B · FLOW</h2>
+      <div id="fiveHourAnchor"></div>
+      <div class="card big" id="rhythmCard"></div>
+    </section>
 
     <div class="row cols-2">
       <div class="card big">
@@ -247,6 +252,11 @@
         <tbody></tbody>
       </table>
     </div>
+
+    <details id="zoneF">
+      <summary>ZONE F · DEEP DIVE — Session explorer</summary>
+      <div id="sessionExplorer"></div>
+    </details>
 
     <details class="card">
       <summary>Pricing (per million tokens, editable)</summary>
@@ -825,6 +835,9 @@ window.__cmRecompute = recompute;
 <script src="src/js/burn-rate.js"></script>
 <script src="src/js/insight-cards.js"></script>
 <script src="src/js/csv-export.js"></script>
+<script src="src/js/session-explorer.js"></script>
+<script src="src/js/five-hour-anchor.js"></script>
+<script src="src/js/hero-png.js"></script>
 
 <script>
 // Wave 1 wiring — filter bar + hero.
@@ -881,6 +894,8 @@ window.__cmRecompute = recompute;
       if (window.ClaudeMeter.pill) window.ClaudeMeter.pill.render();
       if (window.ClaudeMeter.burnRate) window.ClaudeMeter.burnRate.render();
       if (window.ClaudeMeter.insights) window.ClaudeMeter.insights.render();
+      if (window.ClaudeMeter.fiveHourAnchor) window.ClaudeMeter.fiveHourAnchor.render();
+      if (window.ClaudeMeter.sessionExplorer) window.ClaudeMeter.sessionExplorer.render();
     }
     renderSupportTiles();
   }
@@ -910,11 +925,11 @@ window.__cmRecompute = recompute;
     });
   });
 
-  // Cumulative share-as-PNG stub
+  // Cumulative share-as-PNG (Wave 2)
   var cumShare = document.getElementById("cumSharePng");
   if (cumShare) cumShare.addEventListener("click", function(){
-    console.log("Cumulative share 1200x630 PNG — coming soon.");
-    alert("Share 1200×630 PNG — coming soon.");
+    if (window.ClaudeMeter && window.ClaudeMeter.heroPng) window.ClaudeMeter.heroPng.exportCumulative();
+    else alert("PNG exporter not loaded.");
   });
 
   // Share strip wiring
@@ -923,7 +938,10 @@ window.__cmRecompute = recompute;
   var btnCsv = document.getElementById("shareStripCSV");
   var btnSettings = document.getElementById("shareStripSettings");
   if (btnPillPng) btnPillPng.onclick = function(){ alert("Share pill PNG — coming in Wave 3."); };
-  if (btnHeroPng) btnHeroPng.onclick = function(){ alert("Share hero PNG — coming in Wave 3."); };
+  if (btnHeroPng) btnHeroPng.onclick = function(){
+    if (window.ClaudeMeter && window.ClaudeMeter.heroPng) window.ClaudeMeter.heroPng.exportHero();
+    else alert("PNG exporter not loaded.");
+  };
   if (btnCsv) btnCsv.onclick = function(){
     if (window.ClaudeMeter && window.ClaudeMeter.csvExport) window.ClaudeMeter.csvExport.download();
   };
