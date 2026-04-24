@@ -1,0 +1,85 @@
+/* mobile.css — Wave 3 D3
+ * Mobile single-column layout below 900px. Must NOT regress >= 900px.
+ * Personas: Priya (mobile reader), Marcus (mobile sharing).
+ */
+@media (max-width: 899.98px) {
+  body { font-size: 13px; }
+  header { padding: 12px 14px; gap: 10px; }
+  header h1 { font-size: 16px; }
+  main { padding: 12px 14px; gap: 12px; }
+  .card.big, .card { padding: 12px; }
+
+  .row, .row.cols-2, .row.cols-3, .row.cols-4 { grid-template-columns: 1fr; gap: 12px; }
+
+  .hero { display: flex; flex-direction: column; gap: 12px; }
+  .hero-share { flex-wrap: wrap; }
+
+  /* Filter bar collapses into accordion */
+  .fb-bar { padding: 8px 14px; flex-direction: column; align-items: stretch; gap: 6px; }
+  .fb-bar .fb-chip { white-space: normal; }
+  .fb-bar.cm-collapsed > .fb-chip:not(.cm-mobile-toggle):not(.density-chip) { display: none; }
+  .fb-chip.cm-mobile-toggle { display: inline-flex; justify-content: space-between; align-items: center; }
+  .fb-chip.density-chip { margin-left: 0 !important; }
+
+  /* Heatmap 16:9 aspect */
+  #heatmap { aspect-ratio: 16/9; width: 100%; }
+  #heatmap > svg, #heatmap > canvas { width: 100% !important; height: 100% !important; }
+
+  /* Tables → card lists per row */
+  table.cm-mobile-cards thead { display: none; }
+  table.cm-mobile-cards, table.cm-mobile-cards tbody, table.cm-mobile-cards tr,
+  table.cm-mobile-cards th, table.cm-mobile-cards td { display: block; width: 100%; }
+  table.cm-mobile-cards tr {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    background: var(--panel2);
+  }
+  table.cm-mobile-cards td { border: none; padding: 4px 0; display: flex; justify-content: space-between; gap: 8px; }
+  table.cm-mobile-cards td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    flex: 0 0 40%;
+  }
+  table.cm-mobile-cards td.num { text-align: right; }
+
+  /* Hide keyboard shortcut hint bar (if any) */
+  .kbd-hint, [data-kbd-hint], .keyboard-shortcuts, .kbd-bar { display: none !important; }
+
+  /* Compact cumulative chart legend & gauge */
+  .hero-gauge-wrap svg { max-width: 100%; height: auto; }
+
+  /* Footer */
+  .footer { padding: 12px; }
+}
+
+/* Tap-and-hold sheet (native <dialog>) — global, but only triggered on touch devices. */
+dialog#cmTapSheet {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel);
+  color: var(--text);
+  padding: 0;
+  width: min(380px, 92vw);
+  box-shadow: 0 10px 30px #000a;
+}
+dialog#cmTapSheet::backdrop { background: rgba(0,0,0,.55); }
+dialog#cmTapSheet .cm-sheet-head {
+  padding: 12px 14px; border-bottom: 1px solid var(--border); font-weight: 600;
+}
+dialog#cmTapSheet .cm-sheet-body {
+  display: flex; flex-direction: column; gap: 6px; padding: 12px 14px;
+}
+dialog#cmTapSheet .cm-sheet-body button {
+  background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 12px; font-size: 14px; cursor: pointer; font-family: inherit;
+  text-align: left;
+}
+dialog#cmTapSheet .cm-sheet-body button:hover { border-color: var(--accent); color: var(--accent); }
+dialog#cmTapSheet .cm-sheet-foot {
+  padding: 10px 14px; border-top: 1px solid var(--border); text-align: right;
+}

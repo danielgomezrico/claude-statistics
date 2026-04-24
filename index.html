@@ -22,6 +22,10 @@
 <link rel="stylesheet" href="src/css/service-tier.css" />
 <link rel="stylesheet" href="src/css/version-timeline.css" />
 <link rel="stylesheet" href="src/css/branch-cost.css" />
+<link rel="stylesheet" href="src/css/alert-2x.css" />
+<link rel="stylesheet" href="src/css/density-mode.css" />
+<link rel="stylesheet" href="src/css/mobile.css" />
+<link rel="stylesheet" href="src/css/cfo-pdf.css" />
 <script src="src/js/theme.js"></script>
 <script src="src/vendor/chart.umd.min.js"></script>
 <style>
@@ -610,6 +614,13 @@ function recompute(){
     try { window.ClaudeMeter.chartEnhancers.enhanceTimeChart(); } catch(e){}
     try { window.ClaudeMeter.chartEnhancers.enhanceCumulative(); } catch(e){}
   }
+  if (window.ClaudeMeter && window.ClaudeMeter.alert2x) {
+    try {
+      var __ev = STATE.events;
+      if (window.ClaudeMeter.filterBar) __ev = window.ClaudeMeter.filterBar.applyFilters(__ev);
+      window.ClaudeMeter.alert2x.check(__ev);
+    } catch(e){}
+  }
 }
 
 function renderKPIs(){
@@ -1032,6 +1043,7 @@ window.__cmRecompute = recompute;
         renderHero();
       }
     });
+    if (window.ClaudeMeter.density) try { window.ClaudeMeter.density.mountChip(fbEl); } catch(e){}
   }
 
   function fmt$(n){ return "$"+(n||0).toLocaleString(undefined,{maximumFractionDigits:2,minimumFractionDigits:2}); }
@@ -1153,6 +1165,11 @@ window.__cmRecompute = recompute;
 <!-- Wave 3 · Stream 3 (version timeline + git branch chart) -->
 <script src="src/js/version-timeline.js"></script>
 <script src="src/js/branch-cost.js"></script>
+<!-- Wave 3 · Stream 4 (alert + density + mobile + CFO PDF) -->
+<script src="src/js/alert-2x.js"></script>
+<script src="src/js/density-mode.js"></script>
+<script src="src/js/mobile.js"></script>
+<script src="src/js/cfo-pdf.js"></script>
 
 <script>
 (function(){
@@ -1188,6 +1205,25 @@ window.__cmRecompute = recompute;
   } catch(e){ console.warn("[init] attribution.onChange failed:", e); }
   // Re-render Zone C/D on demo-load (recompute handles subsequent refreshes).
   if (STATE.events.length){ try { recompute(); } catch(e){} }
+
+  // Wave 3 D1 — F20 alert: mount + wire to filter-bar (recompute already calls .check).
+  try {
+    if (window.ClaudeMeter && window.ClaudeMeter.alert2x) {
+      window.ClaudeMeter.alert2x.mount();
+      if (STATE.events.length) {
+        var ev = STATE.events;
+        if (window.ClaudeMeter.filterBar) ev = window.ClaudeMeter.filterBar.applyFilters(ev);
+        window.ClaudeMeter.alert2x.check(ev);
+      }
+    }
+  } catch(e){ console.warn("[init] alert2x wiring failed:", e); }
+
+  // Wave 3 D4 — F19 CFO PDF: mount trigger inside the Pricing details panel.
+  try {
+    if (window.ClaudeMeter && window.ClaudeMeter.cfoPdf) {
+      window.ClaudeMeter.cfoPdf.installButton(document.querySelector("details.card"));
+    }
+  } catch(e){ console.warn("[init] cfoPdf wiring failed:", e); }
 })();
 </script>
 </body>

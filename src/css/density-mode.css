@@ -1,0 +1,47 @@
+/* density-mode.css — Wave 3 D2 / §8.3
+ * Three modes set as classes on <html>: density-comfortable | density-dense | density-compact.
+ * Comfortable is the default and re-uses existing styles.
+ */
+
+/* Dense — halve padding everywhere meaningful. */
+html.density-dense main { padding: 12px 16px; gap: 12px; }
+html.density-dense .card { padding: 10px; }
+html.density-dense .card.big { padding: 12px; }
+html.density-dense header { padding: 12px 16px; }
+html.density-dense .fb-bar { padding: 6px 16px; }
+html.density-dense .row { gap: 10px; }
+html.density-dense h2 { margin-bottom: 8px; }
+html.density-dense .kpi .value { font-size: 22px; }
+html.density-dense .hero { gap: 12px; padding: 12px; }
+html.density-dense canvas { max-height: 260px; }
+
+/* Compact — minimal padding + 3-col override above 1440px. */
+html.density-compact main { padding: 8px 12px; gap: 8px; }
+html.density-compact .card { padding: 8px; }
+html.density-compact .card.big { padding: 10px; }
+html.density-compact header { padding: 8px 12px; }
+html.density-compact .fb-bar { padding: 4px 12px; }
+html.density-compact .row { gap: 8px; }
+html.density-compact h2 { margin-bottom: 6px; font-size: 12px; }
+html.density-compact .kpi .value { font-size: 20px; }
+html.density-compact .hero { gap: 10px; padding: 10px; }
+html.density-compact canvas { max-height: 220px; }
+html.density-compact .footer { padding: 8px; }
+@media (min-width: 1440px) {
+  html.density-compact .row.cols-2 { grid-template-columns: repeat(3, 1fr); }
+  html.density-compact .row.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  html.density-compact .row.cols-4 { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* Density chip in filter bar (uses fb-chip styling). */
+.fb-chip.density-chip { font-variant-numeric: tabular-nums; }
+.cm-density-menu {
+  display: flex; flex-direction: column; gap: 4px; min-width: 160px;
+}
+.cm-density-menu button {
+  background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer;
+  font-family: inherit; text-align: left;
+}
+.cm-density-menu button.active { border-color: var(--accent); color: var(--accent); }
+.cm-density-menu button:hover { border-color: var(--accent); }

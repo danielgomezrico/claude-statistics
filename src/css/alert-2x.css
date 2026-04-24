@@ -1,0 +1,42 @@
+/* alert-2x.css — Wave 3 D1 / F20 spend-spike alert banner. */
+.cm-alert-2x{
+  display:none;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin:8px 24px 0;
+  padding:10px 14px;
+  background:linear-gradient(90deg,#ef444422,#eab30822);
+  border:1px solid var(--bad,#ef4444);
+  border-radius:10px;
+  color:var(--text);
+  font-size:13px;
+}
+.cm-alert-2x.show{ display:flex; }
+.cm-alert-2x .cm-alert-msg{ flex:1 1 240px; }
+.cm-alert-2x strong{ color:var(--bad,#ef4444); }
+.cm-alert-2x .cm-alert-actions{ display:flex; gap:6px; flex-wrap:wrap; }
+.cm-alert-2x .cm-alert-btn{
+  background:var(--panel2);
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:5px 11px;
+  font-size:12px;
+  font-family:inherit;
+  cursor:pointer;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+}
+.cm-alert-2x .cm-alert-btn:hover{ border-color:var(--accent); color:var(--accent); }
+.cm-alert-2x .cm-alert-btn.dismiss{ color:var(--muted); }
+
+.cm-alert-settings{ margin-top:10px; display:none; flex-direction:column; gap:6px; }
+.cm-alert-settings.open{ display:flex; }
+.cm-alert-settings label{ font-size:11px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+.cm-alert-settings input[type=email],
+.cm-alert-settings input[type=number]{
+  background:var(--panel2); color:var(--text); border:1px solid var(--border);
+  border-radius:6px; padding:4px 8px; font-size:12px; font-family:inherit;
+}

@@ -1,0 +1,62 @@
+/* cfo-pdf.css — Wave 3 D4 / F19. Print-only CFO-grade serif report.
+ * The hidden iframe at #cmCfoIframe is NOT visible on screen.
+ * All styles below apply to the iframe document body via class .cfo-report
+ * and via @media print to ensure clean Chrome + Safari output.
+ */
+
+/* Hidden iframe used to host the print document. */
+#cmCfoIframe {
+  position: fixed;
+  right: -9999px;
+  bottom: -9999px;
+  width: 8.5in;
+  height: 11in;
+  border: 0;
+}
+
+/* Settings line in the Pricing zone */
+.cm-cfo-trigger {
+  margin-top: 12px;
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+}
+.cm-cfo-trigger label { font-size: 11px; color: var(--muted); }
+.cm-cfo-trigger input[type=text] {
+  background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 4px 8px; font-size: 12px; font-family: inherit;
+}
+
+/* Iframe document styles — these will be inlined in the iframe template too,
+ * but kept here in case the iframe document chooses to <link> them. */
+.cfo-report {
+  font-family: 'Iowan Old Style', 'Palatino', 'Times New Roman', Times, serif;
+  color: #111;
+  background: #fff;
+  padding: 0.75in 0.85in;
+  font-size: 11pt;
+  line-height: 1.5;
+}
+.cfo-report h1 { font-size: 22pt; margin: 0 0 6pt; font-weight: 700; }
+.cfo-report h2 { font-size: 14pt; margin: 18pt 0 6pt; border-bottom: 1px solid #999; padding-bottom: 3pt; }
+.cfo-report .meta { color: #555; font-size: 10pt; margin-bottom: 18pt; }
+.cfo-report .summary { font-style: italic; margin: 0 0 12pt; }
+.cfo-report table { width: 100%; border-collapse: collapse; font-size: 10.5pt; margin: 8pt 0; }
+.cfo-report th, .cfo-report td { border-bottom: 1px solid #ccc; padding: 5pt 8pt; text-align: left; }
+.cfo-report th { background: #f4f1ea; font-weight: 700; font-size: 9.5pt; text-transform: uppercase; letter-spacing: .4pt; }
+.cfo-report td.num, .cfo-report th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.cfo-report .cache-line { margin: 10pt 0; font-size: 11pt; }
+.cfo-report .signature {
+  margin-top: 36pt; display: flex; justify-content: space-between; gap: 24pt; align-items: flex-end;
+}
+.cfo-report .signature .sig-block { flex: 1; border-top: 1px solid #333; padding-top: 4pt; font-size: 10pt; }
+.cfo-report .footer {
+  margin-top: 24pt; padding-top: 8pt; border-top: 1px solid #999;
+  font-size: 9pt; color: #444;
+}
+.cfo-report .roster { color: #444; font-size: 9pt; }
+.cfo-report .hash { font-family: 'Courier New', monospace; font-size: 8.5pt; color: #555; word-break: break-all; }
+
+@media print {
+  @page { size: Letter; margin: 0.5in; }
+  body { margin: 0; }
+  .cfo-report { padding: 0; }
+}
