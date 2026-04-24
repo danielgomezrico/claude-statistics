@@ -18,6 +18,8 @@
 <link rel="stylesheet" href="src/css/sunburst.css" />
 <link rel="stylesheet" href="src/css/zone-c.css" />
 <link rel="stylesheet" href="src/css/tool-treemap.css" />
+<link rel="stylesheet" href="src/css/extended-thinking.css" />
+<link rel="stylesheet" href="src/css/service-tier.css" />
 <script src="src/js/theme.js"></script>
 <script src="src/vendor/chart.umd.min.js"></script>
 <style>
@@ -244,6 +246,8 @@
       </div>
     </section>
 
+    <section id="extThinking" aria-label="Extended-thinking cost"></section>
+
     <section id="zoneD" aria-label="Zone D · Tools">
       <h2 style="margin:8px 0 12px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Zone D · Tools (the instruments)</h2>
       <div class="row cols-2">
@@ -256,9 +260,16 @@
           <div id="hookHealth"></div>
         </div>
       </div>
+      <div id="mcpBreakdown" style="margin-top:16px"></div>
     </section>
 
     <div id="cacheCluster"></div>
+
+    <section id="zoneE" aria-label="Zone E · Cost analysis (tier · region)">
+      <h2 style="margin:8px 0 12px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Zone E · Cost analysis</h2>
+      <section id="serviceTier" aria-label="Service-tier breakdown"></section>
+      <section id="regionBreakdown" aria-label="Region (inference_geo) breakdown" style="margin-top:16px"></section>
+    </section>
 
     <div id="reconcilePanel"></div>
 
@@ -466,6 +477,9 @@ function extractEvent(obj, proj){
   const outTok = usage.output_tokens||0;
   const crTok = usage.cache_read_input_tokens||0;
   const cwTok = usage.cache_creation_input_tokens||0;
+  const thinkTok = usage.thinking_tokens || usage.thinking_input_tokens || 0;
+  const serviceTier = usage.service_tier || msg.service_tier || obj.service_tier || "unknown";
+  const region = obj.inference_geo || msg.inference_geo || (obj.metadata && obj.metadata.inference_geo) || null;
   if (!(inTok||outTok||crTok||cwTok)) return null;
   const p = priceFor(model);
   const cost = (inTok*p.in + outTok*p.out + crTok*p.cacheRead + cwTok*p.cacheWrite)/1e6;
@@ -496,6 +510,9 @@ function extractEvent(obj, proj){
     agentId: obj.agentId || null,
     stopReason: stopReason || null,
     toolCalls: toolCalls,
+    thinkTok: thinkTok,
+    serviceTier: serviceTier,
+    region: region,
   };
 }
 
@@ -568,6 +585,10 @@ function recompute(){
   safe("anomaly",   ()=>{ const m = document.getElementById("anomalyList"); const api = window.ClaudeMeter && window.ClaudeMeter.anomalyFeed; if (m && api) api.render(m, STATE.events); });
   safe("toolTree",  ()=>{ const m = document.getElementById("toolTreemap"); const api = window.ClaudeMeter && window.ClaudeMeter.toolTreemap; if (m && api) api.render(m, STATE.events); });
   safe("hookHealth",()=>{ const m = document.getElementById("hookHealth"); const api = window.ClaudeMeter && window.ClaudeMeter.hookHealth; if (m && api) api.render(m, STATE.events); });
+  safe("extThinking",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.extThinking) window.ClaudeMeter.extThinking.render(); });
+  safe("serviceTier",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.serviceTier) window.ClaudeMeter.serviceTier.render(); });
+  safe("regionBreakdown",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.regionBreakdown) window.ClaudeMeter.regionBreakdown.render(); });
+  safe("mcpBreakdown",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.mcpBreakdown) window.ClaudeMeter.mcpBreakdown.render(); });
   window.ClaudeMeter = window.ClaudeMeter || {};
   window.ClaudeMeter.state = STATE;
   if (window.ClaudeMeter && window.ClaudeMeter.hero) window.ClaudeMeter.hero.render();
@@ -632,6 +653,10 @@ document.querySelectorAll("#bucketTabs .tab").forEach(t=>t.addEventListener("cli
   safe("stack",     renderStack);
   safe("modelTime", renderModelOverTime);
   safe("cache",     renderCacheCluster);
+  safe("extThinking",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.extThinking) window.ClaudeMeter.extThinking.render(); });
+  safe("serviceTier",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.serviceTier) window.ClaudeMeter.serviceTier.render(); });
+  safe("regionBreakdown",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.regionBreakdown) window.ClaudeMeter.regionBreakdown.render(); });
+  safe("mcpBreakdown",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.mcpBreakdown) window.ClaudeMeter.mcpBreakdown.render(); });
 }));
 
 function renderRhythm(){
@@ -897,6 +922,15 @@ function generateDemoEvents(){
         const tcalls = {};
         if (runaway){ tcalls["Bash"] = 3 + Math.floor(Math.random()*3); }
         else { tcalls[tools[Math.floor(Math.random()*tools.length)]] = 1; }
+        const thinkTok = (model.includes("opus") && Math.random() < 0.45) ? 500 + Math.floor(Math.random()*4500) : 0;
+        const tier = Math.random() < 0.7 ? "standard" : (Math.random() < 0.6 ? "priority" : "batch");
+        const region = ["us-east-1","us-west-2","eu-west-1","ap-northeast-1"][Math.floor(Math.random()*4)];
+        // simulate MCP tools occasionally
+        if (Math.random() < 0.15){
+          const mcpServers = ["github","filesystem","postgres","puppeteer"];
+          const srv = mcpServers[Math.floor(Math.random()*mcpServers.length)];
+          tcalls["mcp__"+srv+"__"+(["search","read","write","list"][Math.floor(Math.random()*4)])] = 1;
+        }
         events.push({
           ts, model, inTok, outTok, crTok, cwTok, cost:0,
           session:sessionId, project,
@@ -910,6 +944,7 @@ function generateDemoEvents(){
           agentId: agentName ? ("a-"+Math.random().toString(36).slice(2,8)) : null,
           stopReason: (Math.random() < 0.02 ? "error" : "end_turn"),
           toolCalls: tcalls,
+          thinkTok, serviceTier: tier, region,
         });
       }
     }
@@ -1080,6 +1115,11 @@ window.__cmRecompute = recompute;
 <!-- Wave 2 · Stream 4 (Zone D tools) -->
 <script src="src/js/tool-treemap.js"></script>
 <script src="src/js/hook-health.js"></script>
+<!-- Wave 3 · Stream 2 (extended cost analysis) -->
+<script src="src/js/extended-thinking.js"></script>
+<script src="src/js/service-tier.js"></script>
+<script src="src/js/region-breakdown.js"></script>
+<script src="src/js/mcp-breakdown.js"></script>
 
 <script>
 (function(){

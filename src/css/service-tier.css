@@ -1,0 +1,12 @@
+/* A12 — Service-tier breakdown */
+#serviceTier{margin-top:8px}
+#serviceTier .st-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+#serviceTier .st-head h2{margin:0}
+#serviceTier .st-tabs{display:flex;gap:4px;flex-wrap:wrap}
+#serviceTier .st-tab{padding:4px 10px;border-radius:8px;cursor:pointer;background:var(--panel2);border:1px solid var(--border);font-size:12px;color:var(--muted)}
+#serviceTier .st-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+#serviceTier .st-summary{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}
+#serviceTier .st-chip{padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:var(--panel2)}
+#serviceTier .st-chip b{color:var(--text);font-variant-numeric:tabular-nums}
+#serviceTier .st-empty{padding:24px;color:var(--muted);text-align:center;font-size:13px}
+#serviceTier canvas{max-height:300px}
