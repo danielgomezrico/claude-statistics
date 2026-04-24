@@ -65,3 +65,63 @@
 
 /* Split chart */
 .split-chart-wrap { position:relative; height:220px; }
+
+/* WASTE pane (F13) */
+.pane-waste .waste-head {
+  display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;
+}
+.pane-waste .waste-controls { display:flex; gap:4px; }
+.pane-waste .btn.small {
+  font-size:10px; padding:3px 8px; border-radius:6px;
+  background:var(--panel); color:var(--muted); border:1px solid var(--border); cursor:pointer;
+}
+.pane-waste .btn.small.active {
+  color:var(--accent); border-color:var(--accent); background:var(--panel2);
+}
+.pane-waste .waste-summary {
+  font-size:12px; color:var(--text); background:var(--panel);
+  border-left:3px solid var(--warn); padding:6px 10px; border-radius:4px;
+}
+.pane-waste .waste-empty {
+  padding:16px 8px; color:var(--good); font-size:12px;
+  background:#22c55e11; border:1px dashed #22c55e44; border-radius:6px;
+}
+.pane-waste .waste-table {
+  width:100%; border-collapse:collapse; font-size:12px; margin-top:4px;
+}
+.pane-waste .waste-table th, .pane-waste .waste-table td {
+  padding:6px 8px; border-bottom:1px solid var(--border); text-align:left;
+}
+.pane-waste .waste-table th {
+  color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.4px;
+}
+.pane-waste .waste-table td.num, .pane-waste .waste-table th.num {
+  text-align:right; font-variant-numeric:tabular-nums;
+}
+.pane-waste .waste-row { cursor:pointer; transition: background .15s; }
+.pane-waste .waste-row:hover { background: var(--panel); }
+.pane-waste .waste-row code { font-size:11px; color:var(--muted); }
+
+/* Amortization pane (F14) */
+.pane-amort .amort-empty {
+  padding:16px 8px; color:var(--muted); font-size:12px;
+  background:var(--panel); border:1px dashed var(--border); border-radius:6px;
+  text-align:center;
+}
+.pane-amort .amort-table {
+  width:100%; border-collapse:collapse; font-size:12px; margin-top:4px;
+}
+.pane-amort .amort-table th, .pane-amort .amort-table td {
+  padding:6px 8px; border-bottom:1px solid var(--border); text-align:left;
+}
+.pane-amort .amort-table th {
+  color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.4px;
+}
+.pane-amort .amort-table td.num, .pane-amort .amort-table th.num {
+  text-align:right; font-variant-numeric:tabular-nums;
+}
+.pane-amort .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:10px; }
+.pane-amort .pill.good { color:var(--good); border:1px solid #22c55e44; background:#22c55e11; }
+.pane-amort .pill.warn { color:var(--warn); border:1px solid #eab30844; background:#eab30811; }
+.pane-amort .pill.bad  { color:var(--bad);  border:1px solid #ef444444; background:#ef444411; }
+

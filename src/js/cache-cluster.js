@@ -74,24 +74,16 @@
     `;
     grid.appendChild(pillPane);
 
-    // 4. WASTE (placeholder)
+    // 4. WASTE (Wave 2 — delegated to src/js/cache-waste.js)
     const wastePane = document.createElement("div");
-    wastePane.className = "cluster-pane pane-waste disabled";
-    wastePane.innerHTML = `
-      <h3>Cache WASTE</h3>
-      <span class="coming-badge">Coming in Wave 2</span>
-      <div class="pane-sub">Sessions where cache creation never paid off — writes without enough reads to amortize.</div>
-    `;
+    wastePane.className = "cluster-pane pane-waste";
+    wastePane.innerHTML = `<h3>Cache WASTE</h3>`;
     grid.appendChild(wastePane);
 
-    // 5. Amortization (placeholder)
+    // 5. Amortization (Wave 2 — delegated to src/js/cache-amortization.js)
     const amortPane = document.createElement("div");
-    amortPane.className = "cluster-pane pane-amort disabled";
-    amortPane.innerHTML = `
-      <h3>Write amortization break-even</h3>
-      <span class="coming-badge">Coming in Wave 2</span>
-      <div class="pane-sub">When do cache writes break even? Sessions plotted against the 5-read threshold.</div>
-    `;
+    amortPane.className = "cluster-pane pane-amort";
+    amortPane.innerHTML = `<h3>Write amortization break-even</h3>`;
     grid.appendChild(amortPane);
 
     const charts = { split:null };
@@ -225,6 +217,16 @@
       renderSplit(events, bucket);
       renderGauge(events);
       renderPill(events);
+      try {
+        if (window.ClaudeMeter && window.ClaudeMeter.cacheWaste) {
+          window.ClaudeMeter.cacheWaste.render(wastePane);
+        }
+      } catch (e) { console.error("[cache-waste]", e); }
+      try {
+        if (window.ClaudeMeter && window.ClaudeMeter.amortization) {
+          window.ClaudeMeter.amortization.render(amortPane);
+        }
+      } catch (e) { console.error("[amortization]", e); }
     }
 
     container.__cacheClusterRender = renderAll;

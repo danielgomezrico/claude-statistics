@@ -1,0 +1,13 @@
+{
+  "name": "claude-meter",
+  "version": "0.2.0",
+  "description": "Local-only auditor of Claude Code JSONL logs — browser dashboard + --json CLI.",
+  "bin": {
+    "claude-meter": "src/cli/claude-meter.js"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danielgomezrico/claude-statistics"
+  }
+}

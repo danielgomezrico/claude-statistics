@@ -1,0 +1,57 @@
+/* Reconciliation panel — A14. */
+
+.reconcile-card { margin-top: 16px; }
+
+.reconcile-inputs {
+  display: grid; gap: 12px;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 12px;
+}
+@media (max-width: 820px){
+  .reconcile-inputs { grid-template-columns: 1fr; }
+}
+.reconcile-input-col label {
+  display:block; font-size:11px; color:var(--muted); text-transform:uppercase;
+  letter-spacing:.4px; margin-bottom:4px;
+}
+.reconcile-input-col textarea {
+  width:100%; background:var(--panel2); color:var(--text);
+  border:1px solid var(--border); border-radius:8px; padding:8px 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:11px;
+  resize: vertical;
+}
+.reconcile-parse-status {
+  font-size:11px; margin-top:4px; color:var(--muted); min-height: 14px;
+}
+.reconcile-parse-status.good { color: var(--good); }
+.reconcile-parse-status.bad  { color: var(--bad); }
+
+.reconcile-table {
+  width:100%; border-collapse:collapse; font-size:13px;
+}
+.reconcile-table th, .reconcile-table td {
+  padding:8px 10px; border-bottom:1px solid var(--border); text-align:left;
+}
+.reconcile-table th {
+  color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.5px;
+  font-weight:500;
+}
+.reconcile-table td.num, .reconcile-table th.num {
+  text-align:right; font-variant-numeric:tabular-nums;
+}
+.reconcile-table .delta {
+  font-weight:600; user-select:none;
+}
+.reconcile-table .delta.good { color: var(--good); }
+.reconcile-table .delta.warn { color: var(--warn); }
+.reconcile-table .delta.bad  { color: var(--bad);  }
+.reconcile-table .delta.muted { color: var(--muted); }
+
+.reconcile-spark {
+  display:block; width:120px; height:24px;
+}
+
+.reconcile-bymodel { margin-top: 12px; }
+.reconcile-bymodel summary { cursor:pointer; color:var(--muted); font-size:12px; padding:4px 0; }
+.reconcile-bymodel-table { margin-top: 6px; }
+.reconcile-bymodel-table code { color: var(--accent2); font-size:12px; }

@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="src/css/cache-cluster.css" />
 <link rel="stylesheet" href="src/css/filter-bar.css" />
 <link rel="stylesheet" href="src/css/hero.css" />
+<link rel="stylesheet" href="src/css/reconciliation.css" />
 <script src="src/js/theme.js"></script>
 <script src="src/vendor/chart.umd.min.js"></script>
 <style>
@@ -220,6 +221,8 @@
 
     <div id="cacheCluster"></div>
 
+    <div id="reconcilePanel"></div>
+
     <div class="card big">
       <h2>Top 10 sessions by cost</h2>
       <canvas id="chartTopSessions"></canvas>
@@ -261,9 +264,13 @@
   </div>
 </main>
 
+<script src="src/js/parser-core.js"></script>
 <script src="src/js/heatmap.js"></script>
 <script src="src/js/rhythm-multiples.js"></script>
+<script src="src/js/cache-waste.js"></script>
+<script src="src/js/cache-amortization.js"></script>
 <script src="src/js/cache-cluster.js"></script>
+<script src="src/js/reconciliation.js"></script>
 <script>
 const PRICING = [
   { match:"opus",   in:15.00, out:75.00, cacheRead:1.50, cacheWrite:18.75 },
@@ -468,6 +475,7 @@ function recompute(){
   safe("heatmap",   renderHeatmap);
   safe("modelTime", renderModelOverTime);
   safe("cache",     renderCacheCluster);
+  safe("reconcile", renderReconcile);
   safe("topSess",   renderTopSessions);
   safe("monthTbl",  renderMonthTable);
   safe("projTbl",   renderProjTable);
@@ -657,6 +665,13 @@ function renderCacheCluster(){
   if (!c || !window.CacheCluster) return;
   if (typeof c.__cacheClusterRender === "function") c.__cacheClusterRender();
   else window.CacheCluster.mount(c);
+}
+
+function renderReconcile(){
+  const c = document.getElementById("reconcilePanel");
+  if (!c || !window.ClaudeMeter || !window.ClaudeMeter.reconciliation) return;
+  if (typeof c.__reconcileRender === "function") c.__reconcileRender();
+  else window.ClaudeMeter.reconciliation.mount(c);
 }
 
 function renderTopSessions(){
