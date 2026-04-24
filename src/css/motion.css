@@ -1,0 +1,41 @@
+/*
+ * motion.css — keyframes + utility transitions with reduced-motion guards.
+ *
+ * Two opt-outs:
+ *   1. @media (prefers-reduced-motion: reduce) — honors OS setting.
+ *   2. <html class="motion-off"> — explicit user toggle (see src/js/theme.js).
+ */
+
+/* Only enable non-essential motion when the user has not opted out. */
+@media (prefers-reduced-motion: no-preference){
+  @keyframes cm-fade-in{
+    from{opacity:0;transform:translateY(4px)}
+    to{opacity:1;transform:none}
+  }
+  @keyframes cm-pulse{
+    0%,100%{opacity:1}
+    50%{opacity:.55}
+  }
+
+  .cm-fade-in{animation:cm-fade-in 220ms cubic-bezier(0.16,1,0.3,1) both}
+  .cm-pulse{animation:cm-pulse 1.6s ease-in-out infinite}
+}
+
+/* OS-level reduced motion — neutralize animations + transitions. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:0.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:0.01ms !important;
+    scroll-behavior:auto !important;
+  }
+}
+
+/* Explicit kill-switch utility (applied to <html> by theme.js). */
+html.motion-off *,
+html.motion-off *::before,
+html.motion-off *::after,
+.motion-off{
+  animation:none !important;
+  transition:none !important;
+}

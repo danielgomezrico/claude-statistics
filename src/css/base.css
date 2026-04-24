@@ -1,0 +1,28 @@
+/*
+ * base.css — extra root tokens + global a11y rules that layer on top of
+ * the inline <style> block in index.html. Loaded after the inline style
+ * so these values win for equal-specificity selectors.
+ */
+
+:root{
+  /* Okabe-Ito colorblind-safe series palette (redesign report §8.2). */
+  --cb-orange:#E69F00;
+  --cb-sky:#56B4E9;
+  --cb-green:#009E73;
+  --cb-yellow:#F0E442;
+  --cb-blue:#0072B2;
+  --cb-vermilion:#D55E00;
+  --cb-purple:#CC79A7;
+  --cb-black:#000000;
+
+  /* Muted text bumped from #8a93a6 to meet WCAG AA against #0b0d12 (redesign §8.4). */
+  --muted:#a7afc2;
+}
+
+/* Visible focus ring for every focusable element. Keyboard-only via :focus-visible. */
+*:focus{outline:none}
+*:focus-visible{
+  outline:2px solid var(--accent, #d97757);
+  outline-offset:2px;
+  border-radius:4px;
+}

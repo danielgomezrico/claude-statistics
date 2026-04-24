@@ -1,0 +1,24 @@
+/*
+ * theme-light.css — light-theme overrides.
+ *
+ * Scoped to :root.theme-light so toggling the class on <html> flips every
+ * CSS custom property that the inline index.html <style> and the sibling
+ * src/css/*.css files read via var(). Dark remains the default.
+ */
+
+:root.theme-light{
+  --bg:#fafafa;
+  --panel:#ffffff;
+  --panel2:#f3f4f6;
+  --border:#e5e7eb;
+  --text:#111827;
+  --muted:#4b5563;            /* WCAG AA against #fafafa at 13px */
+  --accent:#c25a3c;           /* darkened ember for contrast on light */
+  --accent2:#1d4ed8;
+  --good:#15803d;
+  --warn:#a16207;
+  --bad:#b91c1c;
+
+  /* Okabe-Ito: swap pure black to gunmetal so it reads as data, not text. */
+  --cb-black:#1f2937;
+}

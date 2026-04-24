@@ -3,13 +3,16 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Claude Usage Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1572359805006702" crossorigin="anonymous"></script>
+<title>Claude Meter — independent auditor of your local JSONL</title>
+<link rel="stylesheet" href="src/css/base.css" />
+<link rel="stylesheet" href="src/css/theme-light.css" />
+<link rel="stylesheet" href="src/css/motion.css" />
+<script src="src/js/theme.js"></script>
+<script src="src/vendor/chart.umd.min.js"></script>
 <style>
   :root{
     --bg:#0b0d12; --panel:#12151c; --panel2:#171b24; --border:#262b38;
-    --text:#e6e8ee; --muted:#8a93a6; --accent:#d97757; --accent2:#6ea8ff;
+    --text:#e6e8ee; --muted:#a7afc2; --accent:#d97757; --accent2:#6ea8ff;
     --good:#22c55e; --warn:#eab308; --bad:#ef4444;
   }
   *{box-sizing:border-box}
@@ -68,20 +71,17 @@
   .gh-link{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:var(--panel2);border:1px solid var(--border);color:var(--muted);transition:.15s;text-decoration:none}
   .gh-link:hover{color:var(--accent);border-color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 12px #d9775733}
   .gh-link svg{width:20px;height:20px;display:block}
-  .page{display:grid;grid-template-columns:160px minmax(0,1fr) 160px;gap:16px;align-items:start}
-  .ad-rail{position:sticky;top:16px;padding:16px 0;display:flex;justify-content:center}
-  .ad-rail ins.adsbygoogle{display:block;width:160px;height:600px;background:var(--panel);border:1px solid var(--border);border-radius:8px}
-  .ad-bottom{padding:20px 24px;border-top:1px solid var(--border);display:flex;justify-content:center}
-  .ad-bottom ins.adsbygoogle{display:block;width:100%;max-width:970px;min-height:90px;background:var(--panel);border:1px solid var(--border);border-radius:8px}
-  @media (max-width:1280px){.page{grid-template-columns:1fr}.ad-rail{display:none}}
+  .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:var(--panel2);border:1px solid var(--border);color:var(--muted);cursor:pointer;padding:0;transition:.15s}
+  .icon-btn:hover{color:var(--accent);border-color:var(--accent)}
+  .icon-btn svg{display:block}
 </style>
 </head>
 <body>
 
 <header>
   <div>
-    <h1>Claude Usage Dashboard</h1>
-    <div class="muted" style="font-size:12px;margin-top:4px">Parses ~/.claude/projects/**/*.jsonl locally — no data leaves your browser.</div>
+    <h1>Claude Meter</h1>
+    <div class="muted" style="font-size:12px;margin-top:4px">An independent auditor of your local JSONL against Anthropic's metering drift. Parses <code>~/.claude/projects/**/*.jsonl</code> in-browser — no data leaves your machine.</div>
   </div>
   <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap">
     <div>
@@ -93,21 +93,12 @@
         <option value="200">Max 20× ($200/mo)</option>
       </select>
     </div>
+    <button type="button" id="themeToggle" class="icon-btn" aria-label="Toggle theme" title="Toggle theme"></button>
     <a class="gh-link" href="https://github.com/danielgomezrico/claude-statistics" target="_blank" rel="noopener noreferrer" title="View on GitHub" aria-label="View source on GitHub">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.97.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.69 5.41-5.26 5.69.41.36.77 1.06.77 2.14 0 1.55-.01 2.8-.01 3.18 0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
     </a>
   </div>
 </header>
-
-<div class="page">
-<aside class="ad-rail ad-left" aria-label="Advertisement">
-  <ins class="adsbygoogle"
-       data-ad-client="ca-pub-1572359805006702"
-       data-ad-slot="0000000001"
-       data-ad-format="vertical"
-       data-full-width-responsive="false"></ins>
-  <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-</aside>
 
 <main>
 
@@ -117,6 +108,11 @@
     <input type="file" id="files" multiple webkitdirectory directory />
     <div id="status" class="muted" style="margin-top:10px;font-size:12px"></div>
     <div class="progress" id="progress"><div class="bar" id="progressBar"></div></div>
+    <div class="muted" style="margin-top:14px;font-size:11px">
+      Firefox / Arc: pick files manually (shift-click to multi-select)
+      <label for="filesFallback" class="btn small" style="display:inline-block;margin-left:6px;padding:4px 10px;font-size:11px;cursor:pointer">Choose .jsonl files</label>
+      <input type="file" id="filesFallback" multiple accept=".jsonl" style="display:none" />
+    </div>
     <div class="demo-row">or</div>
     <button type="button" class="btn primary" id="demoBtn">See demo with sample data</button>
     <div class="muted" style="margin-top:8px;font-size:11px">Explore the dashboard with synthetic usage — no files needed.</div>
@@ -230,27 +226,11 @@
 
   </div>
 
-  <div class="footer">Runs entirely in your browser. Refresh to clear.</div>
+  <div class="footer">
+    <div>Runs entirely in your browser. Refresh to clear.</div>
+    <div style="margin-top:4px">zero-telemetry · no login · no network · <a href="SECURITY.md" style="color:inherit;text-decoration:underline">verify</a></div>
+  </div>
 </main>
-
-<aside class="ad-rail ad-right" aria-label="Advertisement">
-  <ins class="adsbygoogle"
-       data-ad-client="ca-pub-1572359805006702"
-       data-ad-slot="0000000002"
-       data-ad-format="vertical"
-       data-full-width-responsive="false"></ins>
-  <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-</aside>
-</div>
-
-<div class="ad-bottom" aria-label="Advertisement">
-  <ins class="adsbygoogle"
-       data-ad-client="ca-pub-1572359805006702"
-       data-ad-slot="0000000003"
-       data-ad-format="horizontal"
-       data-full-width-responsive="true"></ins>
-  <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-</div>
 
 <script>
 const PRICING = [
@@ -308,6 +288,19 @@ drop.addEventListener("drop",async e=>{
   await ingest(files);
 });
 filesInput.addEventListener("change",async e=>{ await ingest([...e.target.files]); });
+
+const filesFallback = document.getElementById("filesFallback");
+if (filesFallback){
+  filesFallback.addEventListener("click", e=>e.stopPropagation());
+  filesFallback.addEventListener("change", async e=>{
+    e.stopPropagation();
+    await ingest([...e.target.files]);
+  });
+  // Prevent clicks on the fallback label / container from bubbling up to the
+  // drop zone (which would open the directory picker).
+  const fallbackLabel = document.querySelector('label[for="filesFallback"]');
+  if (fallbackLabel) fallbackLabel.addEventListener("click", e=>e.stopPropagation());
+}
 
 async function walk(entry, out){
   if (entry.isFile){

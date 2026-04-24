@@ -1,6 +1,6 @@
-# Claude Statistics Dashboard
+# Claude Meter
 
-Self-contained HTML dashboard that parses local Claude Code JSONL logs and visualizes usage, cost, and subscription ROI. Runs entirely in the browser — no data leaves your machine.
+An independent auditor of your local JSONL against Anthropic's metering drift. A self-contained HTML tool that parses Claude Code JSONL logs in-browser and surfaces usage, cost, cache-hit ratios, and subscription ROI. Zero-install, zero-telemetry, zero-login — nothing leaves your machine.
 
 ## Usage
 
