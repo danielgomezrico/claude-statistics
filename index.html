@@ -471,6 +471,11 @@ function recompute(){
   safe("topSess",   renderTopSessions);
   safe("monthTbl",  renderMonthTable);
   safe("projTbl",   renderProjTable);
+  if (window.ClaudeMeter && window.ClaudeMeter.hero) window.ClaudeMeter.hero.render();
+  if (window.ClaudeMeter && window.ClaudeMeter.chartEnhancers) {
+    try { window.ClaudeMeter.chartEnhancers.enhanceTimeChart(); } catch(e){}
+    try { window.ClaudeMeter.chartEnhancers.enhanceCumulative(); } catch(e){}
+  }
 }
 
 function renderKPIs(){
