@@ -1,0 +1,25 @@
+/* export-menu.css — A22 dropdown */
+.cm-export-wrap{position:relative;display:inline-block}
+.cm-export-menu{
+  position:absolute; top:calc(100% + 6px); right:0;
+  background:var(--panel); border:1px solid var(--border); border-radius:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,.35);
+  min-width:200px; padding:6px; z-index:60; display:none;
+}
+.cm-export-menu.open{display:block}
+.cm-export-item{
+  display:flex; align-items:center; gap:8px;
+  padding:8px 10px; border-radius:6px; cursor:pointer; font-size:13px;
+  color:var(--text); border:1px solid transparent; background:transparent; width:100%; text-align:left;
+}
+.cm-export-item:hover{background:var(--panel2); border-color:var(--border); color:var(--accent)}
+.cm-export-item .cm-export-key{font-size:11px;color:var(--muted);margin-left:auto;font-variant-numeric:tabular-nums}
+.cm-export-divider{height:1px;background:var(--border);margin:4px 6px}
+.cm-toast{
+  position:fixed; left:50%; bottom:32px; transform:translateX(-50%);
+  background:var(--panel); border:1px solid var(--accent); color:var(--text);
+  padding:8px 14px; border-radius:8px; font-size:13px; z-index:9999;
+  box-shadow:0 4px 12px rgba(0,0,0,.4);
+  opacity:0; transition:opacity .2s;
+}
+.cm-toast.show{opacity:1}

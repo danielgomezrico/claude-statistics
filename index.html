@@ -27,6 +27,9 @@
 <link rel="stylesheet" href="src/css/mobile.css" />
 <link rel="stylesheet" href="src/css/cfo-pdf.css" />
 <link rel="stylesheet" href="src/css/drift-diff.css" />
+<link rel="stylesheet" href="src/css/export-menu.css" />
+<link rel="stylesheet" href="src/css/transparency.css" />
+<link rel="stylesheet" href="src/css/print.css" />
 <script src="src/js/theme.js"></script>
 <script src="src/vendor/chart.umd.min.js"></script>
 <style>
@@ -347,7 +350,7 @@
 
   <div class="footer">
     <div>Runs entirely in your browser. Refresh to clear.</div>
-    <div style="margin-top:4px">zero-telemetry · no login · no network · <a href="SECURITY.md" style="color:inherit;text-decoration:underline">verify</a></div>
+    <div style="margin-top:4px">zero-telemetry · no login · no network · <button type="button" id="whatsTrackedLink">What's tracked →</button> · <a href="SECURITY.md" style="color:inherit;text-decoration:underline">verify</a></div>
   </div>
 </main>
 
@@ -1288,6 +1291,12 @@ window.__cmRecompute = recompute;
 <!-- Wave 2 · Stream 4 (Zone D tools) -->
 <script src="src/js/tool-treemap.js"></script>
 <script src="src/js/hook-health.js"></script>
+<!-- Wave 3 · Stream 1 (export menu + transparency + saved views + LinkedIn) -->
+<script src="src/js/export-menu.js"></script>
+<script src="src/js/transparency.js"></script>
+<script src="src/js/team-zip-merge.js"></script>
+<script src="src/js/saved-views.js"></script>
+<script src="src/js/linkedin-caption.js"></script>
 <!-- Wave 3 · Stream 2 (extended cost analysis) -->
 <script src="src/js/extended-thinking.js"></script>
 <script src="src/js/service-tier.js"></script>

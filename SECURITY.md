@@ -75,6 +75,70 @@ To verify what's served on GitHub Pages matches what's in the repo:
 
 If the hashes diverge, that is a security bug — please report it (see below).
 
+<a id="fields-read"></a>
+
+## Fields read
+
+Claude Meter parses local JSONL files and reads only the following fields. Nothing else is touched, and nothing is uploaded.
+
+### From each JSONL line
+
+| Field | Purpose |
+|---|---|
+| `timestamp` / `createdAt` | Event time (ISO or ms) |
+| `message.usage.input_tokens` | Input token count |
+| `message.usage.output_tokens` | Output token count |
+| `message.usage.cache_read_input_tokens` | Cache hits (no charge) |
+| `message.usage.cache_creation_input_tokens` | Cache writes (1.25× premium) |
+| `message.model` / `model` | Model id (used only for pricing match) |
+| `message.content[].type=='tool_use'` (.name) | Tool-use names + counts (Zone D treemap, hook health) |
+| `message.stop_reason` | end_turn / max_tokens / error (Zone Quality) |
+| `sessionId` / `session_id` | Group events into sessions |
+| `cwd` | Working dir — used for project attribution + engineer detection (anonymized after detection) |
+| `gitBranch` | Branch annotation (Zone F display only) |
+| `uuid` / `parentUuid` | Reconstruct sub-agent tree |
+| `isSidechain` | Mark sub-agent calls |
+| `teamName` / `agentName` / `agentId` | Sub-agent metadata (Zone C sunburst) |
+| `version` / `requestId` | Claude Code version timeline (Zone F) |
+| `usage.thinking_tokens` | Extended-thinking cost analysis |
+| `service_tier` | Service-tier breakdown (priority/standard/batch) |
+| `inference_geo` | Region breakdown (compliance) |
+
+### Derived from drag-drop
+
+| Source | Used for |
+|---|---|
+| Folder structure (`projects/<name>/*.jsonl`) | Project name fallback when `cwd` is missing |
+| File size | Progress reporting only |
+
+## Fields written (localStorage)
+
+| Key | Purpose |
+|---|---|
+| `cm.theme` | Theme preference (light / dark) |
+| `cm.motion` | Reduced-motion mode (full / reduced / none) |
+| `cm.density` | High-density mode (comfortable / dense / compact) |
+| `cm.pii.enabled` | PII scrubber on/off |
+| `cm.redact.ui` | Project-name redaction (UI) |
+| `cm.redact.export` | Project-name redaction (export-default-on) |
+| `cm.surveillance.enabled` | Engineer-name anonymization |
+| `cm.attribution.rules` | cwd-regex attribution rules |
+| `cm.views.<name>` | Saved named views (URL-hash blob) |
+| `cm.linkedin.style` | LinkedIn caption template choice |
+| `cm.alert.2x` | 2× spend-alert config (enabled, email, threshold) |
+| `cm.alert.lastNotified` | Last alert timestamp (one-per-day debounce) |
+| `cm.reconcile.ccusage` / `cm.reconcile.console` | Pasted reconciliation JSON |
+| `cm.regions.allowlist` | Compliance allowlist for regions |
+| `cm.branch.rename-rules` | Git-branch rename regex rules |
+| `cm.version.changelog` | User-pasted Claude Code changelog override |
+| `cm.cache.disabled` | IndexedDB parse cache toggle |
+| `cm.anomaly.ignored` | Anomaly-feed ignored-session list |
+| `cm.insights.pin` | Pinned hero insight card |
+
+The URL hash (`window.location.hash`) is also used to encode the active filter state — never sent to a server because there is no server.
+
+The in-app **What's tracked →** drawer (footer link or `?` shortcut) renders the same manifest live.
+
 ## Reporting a vulnerability
 
 Open a GitHub issue at https://github.com/danielgomezrico/claude-statistics/issues with the label `security`, or email the repository owner via the address on the GitHub profile. Please do not include raw JSONL in the report — a redacted snippet or synthetic reproduction is enough.

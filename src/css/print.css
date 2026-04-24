@@ -1,0 +1,16 @@
+/* print.css — A22 PDF render via window.print() */
+@media print {
+  body { background:#fff !important; color:#111 !important; }
+  header, footer, .footer, .drop, .demo-banner, #filterBar,
+  .cm-export-wrap, .hero-share, #linkedinCaptionBtn,
+  details, .tabbar, .cm-redact-toggle, .gh-link, .icon-btn,
+  #ads-left, #ads-right, #ads-bottom { display:none !important; }
+  main { padding:0 !important; display:block !important; }
+  .card, .card.big { border:1px solid #ccc !important; background:#fff !important; color:#111 !important; box-shadow:none !important; page-break-inside:avoid; margin-bottom:12px }
+  h1,h2,h3 { color:#111 !important }
+  .pill { border-color:#ccc !important; color:#111 !important; background:#f5f5f5 !important }
+  table th, table td { color:#111 !important; border-bottom:1px solid #ccc !important }
+  canvas { max-height:240px !important }
+  .cm-print-only { display:block !important }
+}
+.cm-print-only { display:none }
