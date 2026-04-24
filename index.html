@@ -26,6 +26,7 @@
 <link rel="stylesheet" href="src/css/density-mode.css" />
 <link rel="stylesheet" href="src/css/mobile.css" />
 <link rel="stylesheet" href="src/css/cfo-pdf.css" />
+<link rel="stylesheet" href="src/css/drift-diff.css" />
 <script src="src/js/theme.js"></script>
 <script src="src/vendor/chart.umd.min.js"></script>
 <style>
@@ -326,6 +327,14 @@
       </div>
     </details>
 
+    <details class="card" id="zoneGDrift">
+      <summary>ZONE G · Drift Diff Report — recost under each pricing regime (F23)</summary>
+      <div style="margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn primary" id="openDriftDrawer">Open Drift Diff</button>
+        <span class="muted" style="font-size:12px">Replays your usage under every Anthropic pricing regime in the bundled changelog. Includes reversal calc + signed hash + printable PDF.</span>
+      </div>
+    </details>
+
     <details class="card">
       <summary>Pricing (per million tokens, editable)</summary>
       <div id="priceGrid" class="price-grid" style="margin-top:12px">
@@ -448,29 +457,57 @@ async function ingest(files){
   progress.classList.add("show");
   bar.style.width = "0%";
 
+  // Wave 3 · Stream 5 — IndexedDB parse cache lookup.
+  const idb = (window.ClaudeMeter && window.ClaudeMeter.idbCache) || null;
+  let cacheKey = null;
+  if (idb && !idb.isDisabled() && idb.isAvailable()){
+    try {
+      cacheKey = await idb.keyFor(jsonl);
+      const hit = await idb.get(cacheKey);
+      if (hit && hit.payload && Array.isArray(hit.payload.events)){
+        // Hydrate directly — restore Date instances on ts.
+        STATE.events = hit.payload.events.map(e => Object.assign({}, e, { ts: new Date(e.ts) }));
+        const sec = ((Date.now()-(hit.savedAt||Date.now()))/1000/60).toFixed(0);
+        statusEl.textContent = `Cache hit · ${fmtInt(STATE.events.length)} events restored from IDB (saved ~${sec} min ago).`;
+        bar.style.width = "100%";
+        setTimeout(()=>progress.classList.remove("show"), 600);
+        document.getElementById("dash").classList.remove("hidden");
+        recompute();
+        return;
+      }
+    } catch(e){ console.warn("[idb-cache] lookup failed:", e); }
+  }
+
   const t0 = performance.now();
   let total = 0, bytes = 0;
   const totalBytes = jsonl.reduce((s,f)=>s+f.size, 0);
+  const startCount = STATE.events.length;
 
-  for (let i=0; i<jsonl.length; i++){
-    const f = jsonl[i];
-    const text = await f.text();
-    const lines = text.split("\n");
-    const proj = (f.webkitRelativePath||f.name).split("/").slice(-2,-1)[0] || "unknown";
-    for (const line of lines){
-      if (!line.trim()) continue;
-      let obj; try { obj = JSON.parse(line); } catch { continue; }
-      const ev = extractEvent(obj, proj);
-      if (ev){ STATE.events.push(ev); total++; }
+  // Wave 3 · Stream 5 — Web Worker parse path (fallback to inline if unavailable).
+  const workerOk = await tryWorkerParse(jsonl, totalBytes, bar, statusEl);
+  if (!workerOk){
+    for (let i=0; i<jsonl.length; i++){
+      const f = jsonl[i];
+      const text = await f.text();
+      const lines = text.split("\n");
+      const proj = (f.webkitRelativePath||f.name).split("/").slice(-2,-1)[0] || "unknown";
+      for (const line of lines){
+        if (!line.trim()) continue;
+        let obj; try { obj = JSON.parse(line); } catch { continue; }
+        const ev = extractEvent(obj, proj);
+        if (ev){ STATE.events.push(ev); total++; }
+      }
+      bytes += f.size;
+      bar.style.width = ((bytes/totalBytes)*100).toFixed(1)+"%";
+      if (i % 25 === 0 || i === jsonl.length-1){
+        const mb = (bytes/1048576).toFixed(1);
+        const mbTot = (totalBytes/1048576).toFixed(1);
+        statusEl.textContent = `Parsing ${i+1}/${jsonl.length} files · ${mb}/${mbTot} MB · ${fmtInt(total)} events`;
+        await new Promise(r=>setTimeout(r,0));
+      }
     }
-    bytes += f.size;
-    bar.style.width = ((bytes/totalBytes)*100).toFixed(1)+"%";
-    if (i % 25 === 0 || i === jsonl.length-1){
-      const mb = (bytes/1048576).toFixed(1);
-      const mbTot = (totalBytes/1048576).toFixed(1);
-      statusEl.textContent = `Parsing ${i+1}/${jsonl.length} files · ${mb}/${mbTot} MB · ${fmtInt(total)} events`;
-      await new Promise(r=>setTimeout(r,0));
-    }
+  } else {
+    total = STATE.events.length - startCount;
   }
   const secs = ((performance.now()-t0)/1000).toFixed(1);
   statusEl.textContent = `Loaded ${fmtInt(total)} events from ${jsonl.length} file(s) in ${secs}s.`;
@@ -478,7 +515,101 @@ async function ingest(files){
   setTimeout(()=>progress.classList.remove("show"), 800);
   document.getElementById("dash").classList.remove("hidden");
   recompute();
+
+  // Persist parse output back to IDB.
+  if (idb && cacheKey){
+    try {
+      // Compact: drop Date instance, keep tsMs / iso.
+      const compact = STATE.events.map(e => Object.assign({}, e, { ts: (e.ts instanceof Date ? e.ts.toISOString() : e.ts) }));
+      await idb.set(cacheKey, { events: compact, rollups: null, version: 1 });
+    } catch(e){ console.warn("[idb-cache] set failed:", e); }
+  }
 }
+
+// Wave 3 · Stream 5 — Web Worker parse path. Falls back to synchronous parse
+// if Worker is unavailable (file:// origin in Chrome blocks classic workers,
+// rare browsers, etc.). Posts progress to #progressBar via the caller.
+async function tryWorkerParse(jsonl, totalBytes, bar, statusEl){
+  if (typeof Worker === "undefined") return false;
+  // file:// origin disallows classic Worker imports in many browsers.
+  if (location.protocol === "file:") return false;
+  let worker;
+  try { worker = new Worker("src/js/parser.worker.js"); }
+  catch(e){ console.warn("[worker] construct failed, falling back:", e); return false; }
+
+  // Read all files in main thread (FileReader / .text() requires main-thread
+  // File handles), then ship the text to the worker for parsing.
+  const fileBundle = [];
+  for (let i=0; i<jsonl.length; i++){
+    const f = jsonl[i];
+    let text = "";
+    try { text = await f.text(); }
+    catch(e){ console.warn("[worker] file read failed:", f.name, e); continue; }
+    fileBundle.push({
+      name: f.name,
+      relPath: f.webkitRelativePath || f.name,
+      size: f.size || text.length,
+      text: text,
+    });
+  }
+
+  return await new Promise((resolve) => {
+    let done = false, errored = false;
+    const tStart = performance.now();
+    worker.onerror = (err) => {
+      console.warn("[worker] error, falling back:", err && err.message);
+      errored = true;
+      try { worker.terminate(); } catch(e){}
+      resolve(false);
+    };
+    worker.onmessage = (e) => {
+      const m = e.data || {};
+      if (m.type === "progress"){
+        const pct = m.bytesTotal ? (m.bytesDone / m.bytesTotal * 100) : 0;
+        if (bar) bar.style.width = pct.toFixed(1) + "%";
+        if (statusEl){
+          const mb = (m.bytesDone/1048576).toFixed(1);
+          const mbTot = (m.bytesTotal/1048576).toFixed(1);
+          statusEl.textContent = `Parsing (worker) ${m.filesDone}/${m.filesTotal} files · ${mb}/${mbTot} MB · ${fmtInt(m.eventsSoFar)} events`;
+        }
+      } else if (m.type === "events"){
+        // Re-hydrate ts string -> Date for downstream consumers.
+        for (let i=0; i<m.batch.length; i++){
+          const ev = m.batch[i];
+          ev.ts = new Date(ev.ts);
+          STATE.events.push(ev);
+        }
+      } else if (m.type === "done"){
+        done = true;
+        try { worker.terminate(); } catch(e){}
+        const secs = ((performance.now()-tStart)/1000).toFixed(1);
+        if (statusEl) statusEl.textContent = `Worker parsed ${fmtInt(m.total)} events in ${secs}s.`;
+        resolve(true);
+      } else if (m.type === "error"){
+        console.warn("[worker] parse error, falling back:", m.message);
+        errored = true;
+        try { worker.terminate(); } catch(e){}
+        resolve(false);
+      }
+    };
+    try {
+      worker.postMessage({ type:"parse", files: fileBundle, pricing: PRICING });
+    } catch(e){
+      console.warn("[worker] postMessage failed:", e);
+      try { worker.terminate(); } catch(_){}
+      resolve(false);
+    }
+    // Safety timeout — if worker doesn't finish in 5 minutes, bail.
+    setTimeout(() => {
+      if (!done && !errored){
+        console.warn("[worker] timeout, falling back");
+        try { worker.terminate(); } catch(e){}
+        resolve(false);
+      }
+    }, 5*60*1000);
+  });
+}
+window.tryWorkerParse = tryWorkerParse;
 
 function extractEvent(obj, proj){
   const msg = obj.message || obj;
@@ -1170,6 +1301,9 @@ window.__cmRecompute = recompute;
 <script src="src/js/density-mode.js"></script>
 <script src="src/js/mobile.js"></script>
 <script src="src/js/cfo-pdf.js"></script>
+<!-- Wave 3 · Stream 5 (Drift Diff + IDB cache + Web Worker) -->
+<script src="src/js/drift-diff.js"></script>
+<script src="src/js/idb-cache.js"></script>
 
 <script>
 (function(){
@@ -1224,6 +1358,15 @@ window.__cmRecompute = recompute;
       window.ClaudeMeter.cfoPdf.installButton(document.querySelector("details.card"));
     }
   } catch(e){ console.warn("[init] cfoPdf wiring failed:", e); }
+
+  // Wave 3 · Stream 5 — Drift Diff drawer button.
+  try {
+    var ddBtn = document.getElementById("openDriftDrawer");
+    if (ddBtn) ddBtn.addEventListener("click", function(){
+      if (!STATE.events.length){ alert("Load JSONL or demo data first."); return; }
+      if (window.ClaudeMeter && window.ClaudeMeter.driftDiff) window.ClaudeMeter.driftDiff.open();
+    });
+  } catch(e){ console.warn("[init] driftDiff wiring failed:", e); }
 })();
 </script>
 </body>

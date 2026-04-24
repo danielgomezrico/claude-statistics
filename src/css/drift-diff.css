@@ -1,0 +1,88 @@
+/* drift-diff.css — A25 Drift Diff drawer (Wave 3 / F23). */
+
+#driftDrawer{
+  position:fixed; inset:0; z-index:9000;
+  background:rgba(8,10,14,.92); backdrop-filter:blur(6px);
+  display:none; overflow-y:auto; padding:24px;
+}
+#driftDrawer.open{ display:block; }
+
+#driftDrawer .dd-shell{
+  max-width:1100px; margin:0 auto;
+  background:var(--panel,#12151c); border:1px solid var(--border,#262b38);
+  border-radius:14px; padding:22px;
+  color:var(--text,#e6e8ee);
+}
+
+#driftDrawer .dd-head{
+  display:flex; justify-content:space-between; align-items:flex-start;
+  gap:14px; margin-bottom:14px; flex-wrap:wrap;
+}
+#driftDrawer h2{ margin:0; font-size:18px; font-weight:600; color:var(--text,#e6e8ee); text-transform:none; letter-spacing:0; }
+#driftDrawer .dd-sub{ color:var(--muted,#a7afc2); font-size:12px; margin-top:4px; max-width:60ch; }
+#driftDrawer .dd-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+
+#driftDrawer .dd-controls{
+  display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+  padding:10px 12px; margin:10px 0 16px;
+  background:var(--panel2,#171b24); border:1px solid var(--border,#262b38);
+  border-radius:10px; font-size:12px; color:var(--muted,#a7afc2);
+}
+
+#driftDrawer .dd-grid{
+  display:grid; gap:16px;
+  grid-template-columns:1fr;
+}
+@media (min-width:900px){
+  #driftDrawer .dd-grid{ grid-template-columns:1.5fr 1fr; }
+}
+
+#driftDrawer .dd-card{
+  background:var(--panel2,#171b24); border:1px solid var(--border,#262b38);
+  border-radius:10px; padding:14px;
+}
+#driftDrawer .dd-card h3{ margin:0 0 10px; font-size:12px; color:var(--muted,#a7afc2); text-transform:uppercase; letter-spacing:.5px; font-weight:600; }
+
+#driftDrawer canvas{ max-height:340px; }
+
+#driftDrawer table{ width:100%; border-collapse:collapse; font-size:12px; }
+#driftDrawer th, #driftDrawer td{ padding:6px 8px; text-align:left; border-bottom:1px solid var(--border,#262b38); }
+#driftDrawer th{ font-size:10px; text-transform:uppercase; color:var(--muted,#a7afc2); font-weight:500; letter-spacing:.5px; }
+#driftDrawer td.num, #driftDrawer th.num{ text-align:right; font-variant-numeric:tabular-nums; }
+#driftDrawer td.delta-up{ color:#ef4444; }
+#driftDrawer td.delta-down{ color:#22c55e; }
+
+#driftDrawer .dd-hash{
+  margin-top:14px; padding:10px 12px;
+  background:#0b0d12; border:1px solid var(--border,#262b38); border-radius:8px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px;
+  color:var(--muted,#a7afc2); word-break:break-all;
+}
+
+#driftDrawer .dd-events{
+  margin-top:10px; font-size:11px; color:var(--muted,#a7afc2);
+  display:flex; flex-wrap:wrap; gap:6px;
+}
+#driftDrawer .dd-event-pill{
+  padding:2px 8px; border:1px solid var(--border,#262b38);
+  border-radius:999px; background:var(--panel,#12151c);
+}
+
+#driftDrawer .btn-close{
+  background:transparent; border:1px solid var(--border,#262b38);
+  color:var(--muted,#a7afc2); border-radius:8px;
+  padding:6px 12px; cursor:pointer; font-size:13px;
+}
+#driftDrawer .btn-close:hover{ color:var(--text,#e6e8ee); border-color:var(--accent,#d97757); }
+
+/* Print stylesheet — used by "Download signed PDF" via window.print(). */
+@media print{
+  body > *:not(#driftDrawer){ display:none !important; }
+  #driftDrawer{ position:static !important; background:#fff !important; padding:0; display:block !important; }
+  #driftDrawer .dd-shell{ background:#fff !important; color:#000 !important; border:none; max-width:100%; }
+  #driftDrawer .dd-card{ background:#fff !important; border-color:#ccc !important; color:#000 !important; break-inside:avoid; }
+  #driftDrawer h2, #driftDrawer h3, #driftDrawer td, #driftDrawer th{ color:#000 !important; }
+  #driftDrawer .dd-actions, #driftDrawer .btn-close{ display:none !important; }
+  #driftDrawer .dd-hash{ background:#f5f5f5 !important; color:#000 !important; border-color:#ccc !important; }
+  #driftDrawer canvas{ max-height:260px !important; }
+}

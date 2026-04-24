@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "note": "Sample pricing changelog. Sources: Anthropic posted prices + community changelogs. Dates and rates are illustrative — replace with audited values before relying for tax/audit.",
+  "regimes": [
+    { "id": "claude-2-launch",        "effective": "2023-07-11", "model": "claude-2",                   "match": "claude-2",                  "input": 8.00,  "output": 24.00, "cacheRead": 0.00, "cacheWrite": 0.00 },
+    { "id": "claude-instant",         "effective": "2023-08-09", "model": "claude-instant-1",           "match": "claude-instant",            "input": 1.63,  "output": 5.51,  "cacheRead": 0.00, "cacheWrite": 0.00 },
+    { "id": "claude-3-opus-launch",   "effective": "2024-03-04", "model": "claude-3-opus",              "match": "claude-3-opus",             "input": 15.00, "output": 75.00, "cacheRead": 1.50, "cacheWrite": 18.75 },
+    { "id": "claude-3-sonnet-launch", "effective": "2024-03-04", "model": "claude-3-sonnet",            "match": "claude-3-sonnet",           "input": 3.00,  "output": 15.00, "cacheRead": 0.30, "cacheWrite": 3.75 },
+    { "id": "claude-3-haiku-launch",  "effective": "2024-03-13", "model": "claude-3-haiku",             "match": "claude-3-haiku",            "input": 0.25,  "output": 1.25,  "cacheRead": 0.03, "cacheWrite": 0.30 },
+    { "id": "claude-3-5-sonnet-v1",   "effective": "2024-06-20", "model": "claude-3-5-sonnet-20240620", "match": "claude-3-5-sonnet",         "input": 3.00,  "output": 15.00, "cacheRead": 0.30, "cacheWrite": 3.75 },
+    { "id": "claude-3-5-haiku-launch","effective": "2024-11-04", "model": "claude-3-5-haiku",           "match": "claude-3-5-haiku",          "input": 1.00,  "output": 5.00,  "cacheRead": 0.10, "cacheWrite": 1.25 },
+    { "id": "claude-3-7-sonnet",      "effective": "2025-02-24", "model": "claude-3-7-sonnet",          "match": "claude-3-7-sonnet",         "input": 3.00,  "output": 15.00, "cacheRead": 0.30, "cacheWrite": 3.75 },
+    { "id": "claude-sonnet-4",        "effective": "2025-05-22", "model": "claude-sonnet-4",            "match": "claude-sonnet-4",           "input": 3.00,  "output": 15.00, "cacheRead": 0.30, "cacheWrite": 3.75 },
+    { "id": "claude-opus-4",          "effective": "2025-05-22", "model": "claude-opus-4",              "match": "claude-opus-4",             "input": 15.00, "output": 75.00, "cacheRead": 1.50, "cacheWrite": 18.75 },
+    { "id": "claude-opus-4-5",        "effective": "2025-09-29", "model": "claude-opus-4-5",            "match": "claude-opus-4-5",           "input": 15.00, "output": 75.00, "cacheRead": 1.50, "cacheWrite": 18.75 },
+    { "id": "claude-opus-4-7",        "effective": "2026-01-15", "model": "claude-opus-4-7",            "match": "claude-opus-4-7",           "input": 18.00, "output": 90.00, "cacheRead": 1.80, "cacheWrite": 22.50 },
+    { "id": "claude-sonnet-4-5",      "effective": "2025-10-12", "model": "claude-sonnet-4-5",          "match": "claude-sonnet-4-5",         "input": 3.50,  "output": 17.50, "cacheRead": 0.35, "cacheWrite": 4.38 },
+    { "id": "claude-haiku-4-5",       "effective": "2025-11-08", "model": "claude-haiku-4-5",           "match": "claude-haiku-4-5",          "input": 1.10,  "output": 5.50,  "cacheRead": 0.11, "cacheWrite": 1.38 },
+    { "id": "claude-default-fallback","effective": "1970-01-01", "model": "(fallback)",                 "match": "",                          "input": 3.00,  "output": 15.00, "cacheRead": 0.30, "cacheWrite": 3.75 }
+  ]
+}
