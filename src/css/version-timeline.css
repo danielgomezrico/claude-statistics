@@ -1,0 +1,22 @@
+/* A19 — Claude Code version timeline */
+.vt-wrap{display:block}
+.vt-toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;font-size:11px;color:var(--muted,#8a93a6)}
+.vt-toolbar .vt-stats{font-size:11px}
+.vt-toolbar .vt-actions{display:flex;gap:6px;flex-wrap:wrap}
+.vt-toolbar button{background:var(--panel2,#171b24);color:var(--muted,#8a93a6);border:1px solid var(--border,#262b38);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:11px;transition:.15s}
+.vt-toolbar button:hover{color:var(--accent,#d97757);border-color:var(--accent,#d97757)}
+.vt-canvas-wrap{position:relative;height:280px}
+.vt-canvas-wrap canvas{max-height:280px}
+.vt-pin-layer{position:absolute;inset:0;pointer-events:none}
+.vt-pin{position:absolute;top:0;bottom:18px;width:1px;background:#a855f788;pointer-events:auto}
+.vt-pin::before{content:"";position:absolute;top:-2px;left:-4px;width:9px;height:9px;border-radius:50%;background:#a855f7;border:2px solid var(--panel,#12151c)}
+.vt-pin:hover{background:#a855f7}
+.vt-pin:hover::before{transform:scale(1.2)}
+.vt-pin-label{position:absolute;top:-2px;left:8px;font-size:10px;color:#a855f7;background:var(--panel,#12151c);padding:1px 5px;border:1px solid #a855f744;border-radius:4px;white-space:nowrap;cursor:pointer}
+.vt-pin-label:hover{background:#a855f722}
+.vt-empty{padding:20px 12px;text-align:center;color:var(--muted,#8a93a6);font-size:12px}
+.vt-paste{display:none;margin-top:10px}
+.vt-paste.show{display:block}
+.vt-paste textarea{width:100%;min-height:140px;background:var(--panel2,#171b24);color:var(--text,#e6e8ee);border:1px solid var(--border,#262b38);border-radius:8px;padding:8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px}
+.vt-paste-actions{margin-top:6px;display:flex;gap:6px}
+.vt-help{font-size:11px;color:var(--muted,#8a93a6);margin-top:6px}

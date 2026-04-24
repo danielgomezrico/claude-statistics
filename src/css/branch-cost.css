@@ -1,0 +1,35 @@
+/* A20 — git branch cost chart */
+.bc-wrap{display:block}
+.bc-toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;font-size:11px;color:var(--muted,#8a93a6)}
+.bc-toolbar button{background:var(--panel2,#171b24);color:var(--muted,#8a93a6);border:1px solid var(--border,#262b38);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:11px;transition:.15s}
+.bc-toolbar button:hover{color:var(--accent,#d97757);border-color:var(--accent,#d97757)}
+.bc-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;max-height:520px;overflow-y:auto}
+.bc-row{display:grid;grid-template-columns:minmax(0,1fr) 90px 110px 80px;gap:10px;align-items:center;padding:8px 12px;background:var(--panel2,#171b24);border:1px solid var(--border,#262b38);border-radius:10px;cursor:pointer;transition:.15s}
+.bc-row:hover{border-color:var(--accent,#d97757);transform:translateY(-1px)}
+.bc-row:focus{outline:2px solid var(--accent,#d97757);outline-offset:2px}
+.bc-name{font-size:13px;color:var(--text,#e6e8ee);min-width:0;display:flex;flex-direction:column;gap:2px}
+.bc-name code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--text,#e6e8ee);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bc-name .bc-meta{font-size:10px;color:var(--muted,#8a93a6)}
+.bc-bar-wrap{position:relative;height:6px;background:var(--border,#262b38);border-radius:3px;overflow:hidden;margin-top:4px}
+.bc-bar{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--accent,#d97757),#f0a07f);border-radius:3px}
+.bc-spark{display:block}
+.bc-cost{text-align:right;font-size:13px;font-weight:600;color:var(--text,#e6e8ee);font-variant-numeric:tabular-nums}
+.bc-delta{text-align:right;font-size:11px;font-variant-numeric:tabular-nums}
+.bc-delta.up{color:var(--bad,#ef4444)}
+.bc-delta.down{color:var(--good,#22c55e)}
+.bc-delta.flat{color:var(--muted,#8a93a6)}
+.bc-empty{padding:20px 12px;text-align:center;color:var(--muted,#8a93a6);font-size:12px}
+.bc-rules{display:none;margin-top:10px;background:var(--panel2,#171b24);border:1px solid var(--border,#262b38);border-radius:10px;padding:10px}
+.bc-rules.show{display:block}
+.bc-rules h4{margin:0 0 6px;font-size:12px;color:var(--muted,#8a93a6);text-transform:uppercase;letter-spacing:.5px}
+.bc-rule-row{display:grid;grid-template-columns:1fr 1fr 30px;gap:6px;margin-bottom:6px}
+.bc-rule-row input{background:var(--panel,#12151c);color:var(--text,#e6e8ee);border:1px solid var(--border,#262b38);border-radius:6px;padding:4px 8px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px}
+.bc-rule-row .bc-del{background:transparent;color:var(--muted,#8a93a6);border:1px solid var(--border,#262b38);border-radius:6px;cursor:pointer;font-size:14px;line-height:1}
+.bc-rule-row .bc-del:hover{color:var(--bad,#ef4444);border-color:var(--bad,#ef4444)}
+.bc-rules-actions{display:flex;gap:6px;margin-top:8px}
+.bc-help{font-size:11px;color:var(--muted,#8a93a6);margin-top:6px}
+
+@media (max-width:720px){
+  .bc-row{grid-template-columns:1fr 80px 80px}
+  .bc-spark-cell{display:none}
+}

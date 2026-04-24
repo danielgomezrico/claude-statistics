@@ -52,6 +52,29 @@ Current SHA-256: `d2af8974e95271638772e9e9524db5b9a6f58d6ec2d5d781400447b4a31c68
 
 Upstream source: https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js (downloaded once, then committed; never fetched at runtime).
 
+## Reproducible build
+
+Every push to `main` and every pull request runs the [Reproducible build workflow](.github/workflows/reproducible-build.yml). It checks out the commit, computes SHA-256 of the shipped assets in this exact order, and uploads `build-hashes.txt` as a public Actions artifact named `build-hashes-<sha>`:
+
+```
+sha256sum index.html src/vendor/chart.umd.min.js src/vendor/chart.umd.min.js.sha256 | tee build-hashes.txt
+```
+
+To verify what's served on GitHub Pages matches what's in the repo:
+
+1. Note the commit SHA your `index.html` was built from (visible in DevTools → Network → response of `index.html` → `etag`/headers, or `git log -1 main`).
+2. On the [Actions tab](https://github.com/danielgomezrico/claude-statistics/actions/workflows/reproducible-build.yml), open the run for that SHA and download the `build-hashes-<sha>` artifact.
+3. Clone the same commit locally and run:
+   ```
+   git checkout <sha>
+   ./scripts/verify-build.sh --plain
+   ```
+4. `diff` your local output with the unzipped `build-hashes.txt`. Empty diff = byte-for-byte parity.
+
+`scripts/verify-build.sh` works on macOS (`shasum -a 256`) and Linux (`sha256sum`). It exits 0 on a clean checkout and non-zero if any of the listed files are missing.
+
+If the hashes diverge, that is a security bug — please report it (see below).
+
 ## Reporting a vulnerability
 
 Open a GitHub issue at https://github.com/danielgomezrico/claude-statistics/issues with the label `security`, or email the repository owner via the address on the GitHub profile. Please do not include raw JSONL in the report — a redacted snippet or synthetic reproduction is enough.

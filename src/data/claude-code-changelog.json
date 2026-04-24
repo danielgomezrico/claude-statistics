@@ -1,0 +1,18 @@
+{
+  "_note": "Bundled static changelog snapshot for the Version Timeline (A19). Permissive: users may overwrite via the textarea on the dashboard. Dates approximate; verify upstream when in doubt.",
+  "source": "https://github.com/anthropics/claude-code/releases",
+  "entries": [
+    { "date": "2025-08-04", "version": "claude-code-1.0.50", "title": "Tool-use streaming + planner mode preview", "changelog_url": "https://github.com/anthropics/claude-code/releases/tag/v1.0.50" },
+    { "date": "2025-08-22", "version": "claude-code-1.0.60", "title": "Sub-agents GA + isolated worktrees", "changelog_url": "https://github.com/anthropics/claude-code/releases/tag/v1.0.60" },
+    { "date": "2025-09-12", "version": "claude-code-1.0.70", "title": "Hook system + custom slash-commands", "changelog_url": "https://github.com/anthropics/claude-code/releases/tag/v1.0.70" },
+    { "date": "2025-09-30", "version": "claude-code-1.0.78", "title": "Cache TTL bump (1h beta) + cost reporting", "changelog_url": "https://github.com/anthropics/claude-code/releases/tag/v1.0.78" },
+    { "date": "2025-10-12", "version": "claude-code-1.0.82", "title": "Opus 4.7 GA + Sonnet 4.6 default", "changelog_url": "https://github.com/anthropics/claude-code/releases/tag/v1.0.82" },
+    { "date": "2025-10-28", "version": "claude-code-1.0.90", "title": "Skills system + plan-mode revamp", "changelog_url": "https://github.com/anthropics/claude-code/releases/tag/v1.0.90" },
+    { "date": "2025-11-15", "version": "claude-code-1.1.0",  "title": "Memory + long-context tools", "changelog_url": "https://github.com/anthropics/claude-code/releases/tag/v1.1.0" },
+    { "date": "2025-12-04", "version": "claude-code-1.1.10", "title": "MCP transport v2 + reconnect", "changelog_url": "https://github.com/anthropics/claude-code/releases/tag/v1.1.10" },
+    { "date": "2026-01-15", "version": "claude-code-1.2.0",  "title": "Sub-agent worktrees default + agent SDK 1.0", "changelog_url": "https://github.com/anthropics/claude-code/releases/tag/v1.2.0" },
+    { "date": "2026-02-09", "version": "claude-code-1.2.5",  "title": "Reproducible-build attestation + SLSA L3", "changelog_url": "https://github.com/anthropics/claude-code/releases/tag/v1.2.5" },
+    { "date": "2026-03-03", "version": "claude-code-1.3.0",  "title": "Compaction v2 + cost-aware planning", "changelog_url": "https://github.com/anthropics/claude-code/releases/tag/v1.3.0" },
+    { "date": "2026-04-01", "version": "claude-code-1.3.5",  "title": "Opus 4.7 1M-context GA", "changelog_url": "https://github.com/anthropics/claude-code/releases/tag/v1.3.5" }
+  ]
+}

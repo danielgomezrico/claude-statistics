@@ -20,6 +20,8 @@
 <link rel="stylesheet" href="src/css/tool-treemap.css" />
 <link rel="stylesheet" href="src/css/extended-thinking.css" />
 <link rel="stylesheet" href="src/css/service-tier.css" />
+<link rel="stylesheet" href="src/css/version-timeline.css" />
+<link rel="stylesheet" href="src/css/branch-cost.css" />
 <script src="src/js/theme.js"></script>
 <script src="src/vendor/chart.umd.min.js"></script>
 <style>
@@ -308,8 +310,16 @@
     </div>
 
     <details id="zoneF">
-      <summary>ZONE F · DEEP DIVE — Session explorer</summary>
+      <summary>ZONE F · DEEP DIVE — Session explorer · version timeline · branch costs</summary>
       <div id="sessionExplorer"></div>
+      <div class="card big" id="versionTimelineCard" style="margin-top:12px">
+        <h2>Claude Code version timeline <span class="muted" style="font-size:11px">(stacked by version · pins = release dates)</span></h2>
+        <div id="versionTimeline"></div>
+      </div>
+      <div class="card big" id="branchCostCard" style="margin-top:12px">
+        <h2>Cost by git branch <span class="muted" style="font-size:11px">(rename rules editable · click a row to filter)</span></h2>
+        <div id="branchCost"></div>
+      </div>
     </details>
 
     <details class="card">
@@ -502,6 +512,8 @@ function extractEvent(obj, proj){
     project: proj,
     cwd: obj.cwd || msg.cwd || "",
     gitBranch: obj.gitBranch || msg.gitBranch || "",
+    version: obj.version || msg.version || obj.claudeCodeVersion || obj.cliVersion || null,
+    requestId: obj.requestId || msg.requestId || obj.request_id || msg.request_id || null,
     uuid: obj.uuid || null,
     parentUuid: obj.parentUuid || obj.logicalParentUuid || null,
     isSidechain: !!obj.isSidechain,
@@ -589,6 +601,8 @@ function recompute(){
   safe("serviceTier",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.serviceTier) window.ClaudeMeter.serviceTier.render(); });
   safe("regionBreakdown",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.regionBreakdown) window.ClaudeMeter.regionBreakdown.render(); });
   safe("mcpBreakdown",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.mcpBreakdown) window.ClaudeMeter.mcpBreakdown.render(); });
+  safe("versionTl", ()=>{ const m = document.getElementById("versionTimeline"); const api = window.ClaudeMeter && window.ClaudeMeter.versionTimeline; if (!m || !api) return; if (!window.__vtMounted){ api.mount(m); window.__vtMounted = true; } else { api.render(); } });
+  safe("branchCost",()=>{ const m = document.getElementById("branchCost"); const api = window.ClaudeMeter && window.ClaudeMeter.branchCost; if (!m || !api) return; if (!window.__bcMounted){ api.mount(m); window.__bcMounted = true; } else { api.render(); } });
   window.ClaudeMeter = window.ClaudeMeter || {};
   window.ClaudeMeter.state = STATE;
   if (window.ClaudeMeter && window.ClaudeMeter.hero) window.ClaudeMeter.hero.render();
@@ -890,6 +904,19 @@ function generateDemoEvents(){
     return models[0];
   };
   const days = 75;
+  // Synthesize realistic Claude Code versions rolling out over the window.
+  const demoVersions = [
+    { v:"claude-code-1.0.78", afterDay: 0  },
+    { v:"claude-code-1.0.82", afterDay: 18 },
+    { v:"claude-code-1.0.90", afterDay: 35 },
+    { v:"claude-code-1.1.0",  afterDay: 55 },
+  ];
+  const pickVersion = (d)=>{
+    let cur = demoVersions[0].v;
+    for (const x of demoVersions){ if (d >= x.afterDay) cur = x.v; }
+    return cur;
+  };
+  const demoBranches = ["main","feat/wave3-timeline","fix/cache-bug","claude/iso-worktree-a","claude/iso-worktree-b","feat/onboarding","dependabot/npm-jsdom"];
   for (let d=0; d<days; d++){
     const day = new Date(now);
     day.setDate(day.getDate() - (days-1-d));
@@ -898,6 +925,7 @@ function generateDemoEvents(){
     const isWeekend = dow===0 || dow===6;
     const trend = 0.6 + (d/days)*0.8;
     const sessionCount = Math.max(0, Math.round((isWeekend?1:4) * trend + (Math.random()*2-1)));
+    const versionToday = pickVersion(d);
     for (let s=0; s<sessionCount; s++){
       const sessionId = "sess-"+Math.random().toString(36).slice(2,10);
       const project = projects[Math.floor(Math.random()*projects.length)];
@@ -935,7 +963,9 @@ function generateDemoEvents(){
           ts, model, inTok, outTok, crTok, cwTok, cost:0,
           session:sessionId, project,
           cwd: "/Users/dan/projects/"+project,
-          gitBranch: "main",
+          gitBranch: demoBranches[Math.floor(Math.random()*demoBranches.length)],
+          version: versionToday,
+          requestId: "req_"+Math.random().toString(36).slice(2,12),
           uuid: "u-"+Math.random().toString(36).slice(2,10),
           parentUuid: null,
           isSidechain: isSide,
@@ -1120,6 +1150,9 @@ window.__cmRecompute = recompute;
 <script src="src/js/service-tier.js"></script>
 <script src="src/js/region-breakdown.js"></script>
 <script src="src/js/mcp-breakdown.js"></script>
+<!-- Wave 3 · Stream 3 (version timeline + git branch chart) -->
+<script src="src/js/version-timeline.js"></script>
+<script src="src/js/branch-cost.js"></script>
 
 <script>
 (function(){

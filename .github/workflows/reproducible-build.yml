@@ -1,0 +1,46 @@
+name: Reproducible build
+
+# F25 — every push and PR computes SHA-256 of the shipped assets and uploads
+# the manifest as a public Actions artifact. Anyone can clone the same commit
+# and run scripts/verify-build.sh to confirm byte-for-byte parity.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hash:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute SHA-256 manifest
+        run: |
+          set -euo pipefail
+          {
+            echo "# Reproducible-build manifest"
+            echo "# repo:    ${{ github.repository }}"
+            echo "# commit:  ${{ github.sha }}"
+            echo "# ref:     ${{ github.ref }}"
+            echo "# run id:  ${{ github.run_id }}"
+            echo "# date:    $(date -u +%FT%TZ)"
+            echo
+            sha256sum \
+              index.html \
+              src/vendor/chart.umd.min.js \
+              src/vendor/chart.umd.min.js.sha256
+          } | tee build-hashes.txt
+
+      - name: Upload manifest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-hashes-${{ github.sha }}
+          path: build-hashes.txt
+          if-no-files-found: error
+          retention-days: 90
