@@ -1,0 +1,86 @@
+/* hero.css — Hero zone (pill, burn-rate gauge, insight cards, support tiles, trust, share). */
+.hero {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1.4fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .hero { grid-template-columns: 1fr; }
+}
+
+.hero-col { display: flex; flex-direction: column; gap: 14px; }
+
+.hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  font-size: 14px;
+  line-height: 1.35;
+  position: relative;
+  cursor: context-menu;
+}
+.hero-dot {
+  width: 10px; height: 10px; border-radius: 999px; flex: 0 0 10px;
+  background: var(--muted);
+}
+.hero-pill.green .hero-dot { background: var(--good); box-shadow: 0 0 0 4px #22c55e22; }
+.hero-pill.yellow .hero-dot { background: var(--warn); box-shadow: 0 0 0 4px #eab30822; }
+.hero-pill.red .hero-dot { background: var(--bad); box-shadow: 0 0 0 4px #ef444422; }
+.hero-flash {
+  position: absolute; top: -24px; right: 0;
+  background: var(--good); color: #fff; font-size: 11px;
+  padding: 2px 8px; border-radius: 6px;
+}
+
+.hero-gauge-wrap {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+#heroGauge { width: 200px; height: 120px; }
+#heroGaugeCaption { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hero-gauge-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+
+#heroInsights .hi-row {
+  display: flex; align-items: stretch; gap: 8px;
+}
+.hi-card {
+  flex: 1; background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px; position: relative;
+  min-height: 70px;
+}
+.hi-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+.hi-body { font-size: 13px; line-height: 1.4; color: var(--text); }
+.hi-nav {
+  background: var(--panel2); border: 1px solid var(--border); color: var(--muted);
+  border-radius: 8px; width: 30px; cursor: pointer; font-size: 16px;
+}
+.hi-nav:hover { color: var(--accent); border-color: var(--accent); }
+.hi-pin {
+  position: absolute; top: 8px; right: 10px;
+  background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 16px;
+}
+.hi-pin:hover { color: var(--accent); }
+.hi-dots { display: flex; gap: 4px; justify-content: center; margin-top: 8px; }
+.hi-dot { width: 6px; height: 6px; border-radius: 999px; background: var(--border); cursor: pointer; }
+.hi-dot.on { background: var(--accent); }
+
+.hero-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.hero-tile {
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 12px;
+}
+.hero-tile .v { font-size: 16px; font-weight: 700; }
+.hero-tile .k { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
+
+.hero-trust { font-size: 11px; color: var(--muted); }
+.hero-share { display: flex; gap: 6px; flex-wrap: wrap; }
+.hero-share .btn { padding: 6px 10px; font-size: 11px; }
+.hero-empty { padding: 20px; text-align: center; }
