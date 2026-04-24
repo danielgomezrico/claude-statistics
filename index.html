@@ -7,6 +7,8 @@
 <link rel="stylesheet" href="src/css/base.css" />
 <link rel="stylesheet" href="src/css/theme-light.css" />
 <link rel="stylesheet" href="src/css/motion.css" />
+<link rel="stylesheet" href="src/css/heatmap.css" />
+<link rel="stylesheet" href="src/css/cache-cluster.css" />
 <script src="src/js/theme.js"></script>
 <script src="src/vendor/chart.umd.min.js"></script>
 <style>
@@ -55,8 +57,6 @@
   .price-grid{display:grid;grid-template-columns:2fr repeat(4,1fr);gap:6px;align-items:center}
   .price-grid input{width:100%}
   .price-grid .head{font-size:11px;color:var(--muted);text-transform:uppercase}
-  #heatmap{display:grid;gap:2px;font-size:10px;color:var(--muted)}
-  #heatmap .hm-cell{height:22px;border-radius:3px}
   .progress{margin-top:12px;height:8px;background:var(--panel2);border-radius:999px;overflow:hidden;border:1px solid var(--border);display:none}
   .progress.show{display:block}
   .progress .bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#f0a07f);transition:width .1s linear}
@@ -145,21 +145,12 @@
         <canvas id="chartTime"></canvas>
       </div>
       <div class="card big">
-        <h2>Hour-of-day (local)</h2>
-        <canvas id="chartHourOfDay"></canvas>
-      </div>
-    </div>
-
-    <div class="row cols-2">
-      <div class="card big">
-        <h2>Day-of-week</h2>
-        <canvas id="chartDayOfWeek"></canvas>
-      </div>
-      <div class="card big">
         <h2>Cost split by model (total)</h2>
         <canvas id="chartModel"></canvas>
       </div>
     </div>
+
+    <div class="card big" id="rhythmCard"></div>
 
     <div class="row cols-2">
       <div class="card big">
@@ -174,9 +165,8 @@
 
     <div class="row cols-2">
       <div class="card big">
-        <h2>Activity heatmap (day × hour, local)</h2>
         <div id="heatmap"></div>
-        <div class="muted" style="font-size:11px;margin-top:8px">Darker = more spend. Hover for amount.</div>
+        <div class="muted" style="font-size:11px;margin-top:8px">Click a cell to filter to that hour. Arrow keys navigate.</div>
       </div>
       <div class="card big">
         <h2>Models over time <span class="muted" style="font-size:11px">(follows bucket)</span></h2>
@@ -184,16 +174,11 @@
       </div>
     </div>
 
-    <div class="row cols-2">
-      <div class="card big">
-        <h2>Cache hit ratio over time</h2>
-        <canvas id="chartCache"></canvas>
-        <div class="muted" style="font-size:11px;margin-top:6px">cache_read / (cache_read + fresh input + cache_write). Higher = more leverage.</div>
-      </div>
-      <div class="card big">
-        <h2>Top 10 sessions by cost</h2>
-        <canvas id="chartTopSessions"></canvas>
-      </div>
+    <div id="cacheCluster"></div>
+
+    <div class="card big">
+      <h2>Top 10 sessions by cost</h2>
+      <canvas id="chartTopSessions"></canvas>
     </div>
 
     <div class="card big">
@@ -232,6 +217,9 @@
   </div>
 </main>
 
+<script src="src/js/heatmap.js"></script>
+<script src="src/js/rhythm-multiples.js"></script>
+<script src="src/js/cache-cluster.js"></script>
 <script>
 const PRICING = [
   { match:"opus",   in:15.00, out:75.00, cacheRead:1.50, cacheWrite:18.75 },
@@ -239,6 +227,7 @@ const PRICING = [
   { match:"haiku",  in: 1.00, out: 5.00, cacheRead:0.10, cacheWrite: 1.25 },
   { match:"",       in: 3.00, out:15.00, cacheRead:0.30, cacheWrite: 3.75 },
 ];
+window.PRICING = PRICING;
 
 function renderPriceGrid(){
   const grid = document.getElementById("priceGrid");
@@ -267,6 +256,7 @@ function priceFor(model){
 }
 
 const STATE = { events: [], charts: {}, bucket: "day" };
+window.STATE = STATE;
 
 const drop = document.getElementById("drop");
 const filesInput = document.getElementById("files");
@@ -427,14 +417,13 @@ function recompute(){
   }
   safe("kpi",       renderKPIs);
   safe("time",      renderTimeChart);
-  safe("hod",       renderHourOfDay);
-  safe("dow",       renderDayOfWeek);
+  safe("rhythm",    renderRhythm);
   safe("model",     renderModelChart);
   safe("stack",     renderStack);
   safe("cum",       renderCumulative);
   safe("heatmap",   renderHeatmap);
   safe("modelTime", renderModelOverTime);
-  safe("cache",     renderCacheEfficiency);
+  safe("cache",     renderCacheCluster);
   safe("topSess",   renderTopSessions);
   safe("monthTbl",  renderMonthTable);
   safe("projTbl",   renderProjTable);
@@ -494,30 +483,14 @@ document.querySelectorAll("#bucketTabs .tab").forEach(t=>t.addEventListener("cli
   safe("time",      renderTimeChart);
   safe("stack",     renderStack);
   safe("modelTime", renderModelOverTime);
-  safe("cache",     renderCacheEfficiency);
+  safe("cache",     renderCacheCluster);
 }));
 
-function renderHourOfDay(){
-  const arr = new Array(24).fill(0);
-  for (const e of STATE.events) arr[e.ts.getHours()] += e.cost;
-  destroyChart("hod");
-  STATE.charts.hod = new Chart(document.getElementById("chartHourOfDay"),{
-    type:"bar",
-    data:{labels:[...Array(24).keys()].map(h=>h+":00"), datasets:[{label:"Cost", data:arr, backgroundColor:"#6ea8ff"}]},
-    options:{animation:false, plugins:{legend:{labels:{color:"#e6e8ee"}}}, scales: commonAxes}
-  });
-}
-
-function renderDayOfWeek(){
-  const arr = new Array(7).fill(0);
-  for (const e of STATE.events) arr[e.ts.getDay()] += e.cost;
-  const labels = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-  destroyChart("dow");
-  STATE.charts.dow = new Chart(document.getElementById("chartDayOfWeek"),{
-    type:"bar",
-    data:{labels, datasets:[{label:"Cost", data:arr, backgroundColor:"#22c55e"}]},
-    options:{animation:false, plugins:{legend:{labels:{color:"#e6e8ee"}}}, scales: commonAxes}
-  });
+function renderRhythm(){
+  const c = document.getElementById("rhythmCard");
+  if (!c || !window.RhythmMultiples) return;
+  if (typeof c.__rhythmRender === "function") c.__rhythmRender();
+  else window.RhythmMultiples.mount(c);
 }
 
 function renderModelChart(){
@@ -595,33 +568,12 @@ function renderCumulative(){
 }
 
 function renderHeatmap(){
-  const grid = new Array(7).fill(0).map(()=>new Array(24).fill(0));
-  for (const e of STATE.events){ grid[e.ts.getDay()][e.ts.getHours()] += e.cost; }
-  const max = Math.max(...grid.flat(), 0.0001);
   const c = document.getElementById("heatmap");
-  c.innerHTML = "";
-  c.style.gridTemplateColumns = "36px repeat(24,1fr)";
-  c.appendChild(Object.assign(document.createElement("div"),{textContent:""}));
-  for (let h=0; h<24; h++){
-    const cell = document.createElement("div");
-    cell.textContent = h%3===0 ? h : "";
-    cell.style.textAlign = "center";
-    c.appendChild(cell);
-  }
-  const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-  for (let d=0; d<7; d++){
-    const lbl = document.createElement("div");
-    lbl.textContent = days[d]; lbl.style.alignSelf = "center";
-    c.appendChild(lbl);
-    for (let h=0; h<24; h++){
-      const v = grid[d][h];
-      const intensity = Math.pow(v/max, 0.6);
-      const cell = document.createElement("div");
-      cell.className = "hm-cell";
-      cell.style.background = `rgba(217,119,87,${0.05 + intensity*0.95})`;
-      cell.title = `${days[d]} ${h}:00 — ${fmt$(v)}`;
-      c.appendChild(cell);
-    }
+  if (!c || !window.Heatmap) return;
+  if (typeof c.__heatmapRender === "function") {
+    c.__heatmapRender();
+  } else {
+    window.Heatmap.mount(c);
   }
 }
 
@@ -651,28 +603,11 @@ function renderModelOverTime(){
   });
 }
 
-function renderCacheEfficiency(){
-  const map = new Map();
-  for (const e of STATE.events){
-    const k = bucketKey(e.ts, STATE.bucket);
-    if (!map.has(k)) map.set(k,{ts:k, fresh:0, cached:0});
-    const a = map.get(k);
-    a.fresh += e.inTok + e.cwTok;
-    a.cached += e.crTok;
-  }
-  const arr = [...map.values()].sort((a,b)=>a.ts-b.ts);
-  const ratios = arr.map(a=>{ const t = a.fresh + a.cached; return t ? (a.cached/t)*100 : 0; });
-  destroyChart("cache");
-  STATE.charts.cache = new Chart(document.getElementById("chartCache"),{
-    type:"line",
-    data:{ labels: arr.map(a=>fmtBucketLabel(a.ts, STATE.bucket)),
-      datasets:[{label:"Cache hit %", data:ratios, borderColor:"#22c55e", backgroundColor:"#22c55e22", fill:true, tension:0.25, pointRadius:0}]},
-    options:{animation:false, plugins:{legend:{labels:{color:"#e6e8ee"}}},
-      scales:{
-        x:{ticks:{color:"#8a93a6",maxRotation:0,autoSkip:true,maxTicksLimit:12},grid:{color:"#262b38"}},
-        y:{min:0,max:100,ticks:{color:"#8a93a6",callback:v=>v+"%"},grid:{color:"#262b38"}}
-      }}
-  });
+function renderCacheCluster(){
+  const c = document.getElementById("cacheCluster");
+  if (!c || !window.CacheCluster) return;
+  if (typeof c.__cacheClusterRender === "function") c.__cacheClusterRender();
+  else window.CacheCluster.mount(c);
 }
 
 function renderTopSessions(){
