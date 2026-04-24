@@ -56,6 +56,14 @@
   .progress{margin-top:12px;height:8px;background:var(--panel2);border-radius:999px;overflow:hidden;border:1px solid var(--border);display:none}
   .progress.show{display:block}
   .progress .bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#f0a07f);transition:width .1s linear}
+  .demo-row{margin-top:16px;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-size:12px}
+  .demo-row::before,.demo-row::after{content:"";flex:0 0 60px;height:1px;background:var(--border)}
+  .btn{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;transition:.15s}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:#e8876a;border-color:#e8876a;color:#fff}
+  .demo-banner{background:linear-gradient(90deg,#d9775722,#6ea8ff22);border:1px solid var(--accent);border-radius:10px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+  .demo-banner strong{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -86,9 +94,16 @@
     <input type="file" id="files" multiple webkitdirectory directory />
     <div id="status" class="muted" style="margin-top:10px;font-size:12px"></div>
     <div class="progress" id="progress"><div class="bar" id="progressBar"></div></div>
+    <div class="demo-row">or</div>
+    <button type="button" class="btn primary" id="demoBtn">See demo with sample data</button>
+    <div class="muted" style="margin-top:8px;font-size:11px">Explore the dashboard with synthetic usage — no files needed.</div>
   </div>
 
   <div id="dash" class="hidden">
+    <div class="demo-banner hidden" id="demoBanner">
+      <div><strong>Demo mode</strong> — showing synthetic sample data, not your real usage.</div>
+      <button type="button" class="btn" id="exitDemoBtn">Exit demo</button>
+    </div>
 
     <div class="row cols-4">
       <div class="card kpi"><h2>Total cost (API eq.)</h2><div class="value" id="kpiTotal">$0</div><div class="sub" id="kpiRange">—</div></div>
@@ -698,6 +713,69 @@ function renderProjTable(){
 document.getElementById("plan").addEventListener("change",()=>{
   if(STATE.events.length){ safe("kpi",renderKPIs); safe("cum",renderCumulative); safe("monthTbl",renderMonthTable); }
 });
+
+function generateDemoEvents(){
+  const events = [];
+  const now = new Date();
+  const projects = ["claude-statistics","web-app","backend-api","personal-notes","experiments","infra-tools"];
+  const models = ["claude-opus-4-7","claude-sonnet-4-6","claude-haiku-4-5"];
+  const weights = [0.22, 0.68, 0.10];
+  const pickModel = ()=>{
+    const r = Math.random(); let acc = 0;
+    for (let i=0; i<models.length; i++){ acc += weights[i]; if (r < acc) return models[i]; }
+    return models[0];
+  };
+  const days = 75;
+  for (let d=0; d<days; d++){
+    const day = new Date(now);
+    day.setDate(day.getDate() - (days-1-d));
+    day.setHours(0,0,0,0);
+    const dow = day.getDay();
+    const isWeekend = dow===0 || dow===6;
+    const trend = 0.6 + (d/days)*0.8;
+    const sessionCount = Math.max(0, Math.round((isWeekend?1:4) * trend + (Math.random()*2-1)));
+    for (let s=0; s<sessionCount; s++){
+      const sessionId = "sess-"+Math.random().toString(36).slice(2,10);
+      const project = projects[Math.floor(Math.random()*projects.length)];
+      const hourStart = 8 + Math.floor(Math.random()*12);
+      const msgCount = 8 + Math.floor(Math.random()*70);
+      const durationMs = (10 + Math.random()*150) * 60000;
+      const sessionBase = new Date(day);
+      sessionBase.setHours(hourStart, Math.floor(Math.random()*60), 0, 0);
+      for (let m=0; m<msgCount; m++){
+        const ts = new Date(sessionBase.getTime() + (m/msgCount)*durationMs + Math.random()*30000);
+        const model = pickModel();
+        const cacheWarm = m > 0 && Math.random() < 0.75;
+        const inTok = 300 + Math.floor(Math.random()*2500);
+        const outTok = 150 + Math.floor(Math.random()*1800);
+        const crTok = cacheWarm ? 4000 + Math.floor(Math.random()*45000) : 0;
+        const cwTok = (m === 0 || Math.random() < 0.2) ? 800 + Math.floor(Math.random()*9000) : 0;
+        events.push({ ts, model, inTok, outTok, crTok, cwTok, cost:0, session:sessionId, project });
+      }
+    }
+  }
+  return events;
+}
+
+function loadDemo(){
+  STATE.events = generateDemoEvents();
+  statusEl.textContent = `Demo mode · ${fmtInt(STATE.events.length)} synthetic events across ${fmtInt(new Set(STATE.events.map(e=>e.session)).size)} sessions.`;
+  document.getElementById("demoBanner").classList.remove("hidden");
+  document.getElementById("dash").classList.remove("hidden");
+  document.getElementById("dash").scrollIntoView({behavior:"smooth",block:"start"});
+  recompute();
+}
+
+function exitDemo(){
+  STATE.events = [];
+  Object.keys(STATE.charts).forEach(destroyChart);
+  document.getElementById("demoBanner").classList.add("hidden");
+  document.getElementById("dash").classList.add("hidden");
+  statusEl.textContent = "";
+}
+
+document.getElementById("demoBtn").addEventListener("click",e=>{ e.stopPropagation(); loadDemo(); });
+document.getElementById("exitDemoBtn").addEventListener("click",exitDemo);
 </script>
 </body>
 </html>

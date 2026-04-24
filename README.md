@@ -4,9 +4,10 @@ Self-contained HTML dashboard that parses local Claude Code JSONL logs and visua
 
 ## Usage
 
-1. Open `claude-usage-dashboard.html` in any modern browser.
+1. Open `index.html` in any modern browser (or visit the GitHub Pages deployment).
 2. Click the dropzone (or drag) and select `~/.claude/` (or `~/.claude/projects/`).
    - `Cmd+Shift+.` in the Finder file picker reveals hidden folders.
+   - Or hit **See demo with sample data** to explore with synthetic usage.
 3. Pick your subscription tier in the top-right selector.
 4. Watch the progress bar while events parse in a few seconds.
 
@@ -69,7 +70,7 @@ Interpretation: 78× the value of the flat $100 subscription. Cache reads domina
 
 ## Files
 
-- `claude-usage-dashboard.html` — the whole app, single file, no external data dependencies (one CDN import for Chart.js).
+- `index.html` — the whole app, single file, no external data dependencies (one CDN import for Chart.js).
 - `README.md` — this file.
 - `LICENSE` — MIT.
 
