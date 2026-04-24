@@ -13,6 +13,11 @@
 <link rel="stylesheet" href="src/css/hero.css" />
 <link rel="stylesheet" href="src/css/reconciliation.css" />
 <link rel="stylesheet" href="src/css/session-explorer.css" />
+<link rel="stylesheet" href="src/css/attribution.css" />
+<link rel="stylesheet" href="src/css/roi-cards.css" />
+<link rel="stylesheet" href="src/css/sunburst.css" />
+<link rel="stylesheet" href="src/css/zone-c.css" />
+<link rel="stylesheet" href="src/css/tool-treemap.css" />
 <script src="src/js/theme.js"></script>
 <script src="src/vendor/chart.umd.min.js"></script>
 <style>
@@ -98,6 +103,7 @@
       </select>
     </div>
     <button type="button" id="themeToggle" class="icon-btn" aria-label="Toggle theme" title="Toggle theme"></button>
+    <div id="redactToggleHost" style="display:flex;align-items:center"></div>
     <a class="gh-link" href="https://github.com/danielgomezrico/claude-statistics" target="_blank" rel="noopener noreferrer" title="View on GitHub" aria-label="View source on GitHub">
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.71 1.26 3.37.97.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.7 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.12 3.05.74.81 1.19 1.84 1.19 3.1 0 4.43-2.69 5.41-5.26 5.69.41.36.77 1.06.77 2.14 0 1.55-.01 2.8-.01 3.18 0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
     </a>
@@ -224,9 +230,44 @@
       </div>
     </div>
 
+    <section id="zoneC" aria-label="Zone C · Agents">
+      <h2 style="margin:8px 0 12px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Zone C · Agents (the team)</h2>
+      <div class="row cols-2">
+        <div class="card big" id="agentSunburstCard">
+          <h2>Subagent / team cost sunburst <span class="muted" style="font-size:11px">(main ↘ team ↘ agent — click a wedge to drill)</span></h2>
+          <div id="agentSunburst"></div>
+        </div>
+        <div class="card big" id="runawayCard">
+          <h2>Top loops / runaway agents <span class="muted" style="font-size:11px">(flagged sessions — click to open)</span></h2>
+          <div id="runawayList"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="zoneD" aria-label="Zone D · Tools">
+      <h2 style="margin:8px 0 12px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Zone D · Tools (the instruments)</h2>
+      <div class="row cols-2">
+        <div class="card big" id="toolTreemapCard">
+          <h2>Tool usage treemap <span class="muted" style="font-size:11px">(area = calls · color = error rate)</span></h2>
+          <div id="toolTreemap"></div>
+        </div>
+        <div class="card big" id="hookHealthCard">
+          <h2>Hook health <span class="muted" style="font-size:11px">(invocations · errors · p95)</span></h2>
+          <div id="hookHealth"></div>
+        </div>
+      </div>
+    </section>
+
     <div id="cacheCluster"></div>
 
     <div id="reconcilePanel"></div>
+
+    <section id="anomalyFeed" aria-label="Anomaly feed">
+      <div class="card big">
+        <h2>Anomaly feed <span class="muted" style="font-size:11px">(weird sessions this month — rule-based)</span></h2>
+        <div id="anomalyList"></div>
+      </div>
+    </section>
 
     <div class="card big">
       <h2>Top 10 sessions by cost</h2>
@@ -245,7 +286,9 @@
       </table>
     </div>
 
-    <div class="card big">
+    <section id="roiCards" class="card big" aria-label="Per-project ROI"></section>
+
+    <div class="card big hidden" id="projTableCard">
       <h2>Top projects</h2>
       <table id="projTable">
         <thead><tr><th>Project</th><th class="num">Sessions</th><th class="num">Messages</th><th class="num">Tokens</th><th class="num">Cost</th></tr></thead>
@@ -426,11 +469,33 @@ function extractEvent(obj, proj){
   if (!(inTok||outTok||crTok||cwTok)) return null;
   const p = priceFor(model);
   const cost = (inTok*p.in + outTok*p.out + crTok*p.cacheRead + cwTok*p.cacheWrite)/1e6;
+  // Subagent / tool-use metadata (Zone C + Zone D + attribution)
+  let toolCalls = null;
+  const content = msg && msg.content;
+  if (Array.isArray(content)){
+    toolCalls = {};
+    for (const c of content){
+      if (c && c.type === "tool_use" && c.name){
+        toolCalls[c.name] = (toolCalls[c.name]||0) + 1;
+      }
+    }
+  }
+  const stopReason = msg && (msg.stop_reason || msg.stopReason);
   return {
     ts: new Date(ts),
     model, inTok, outTok, crTok, cwTok, cost,
     session: obj.sessionId || obj.session_id || "—",
     project: proj,
+    cwd: obj.cwd || msg.cwd || "",
+    gitBranch: obj.gitBranch || msg.gitBranch || "",
+    uuid: obj.uuid || null,
+    parentUuid: obj.parentUuid || obj.logicalParentUuid || null,
+    isSidechain: !!obj.isSidechain,
+    teamName: obj.teamName || null,
+    agentName: obj.agentName || null,
+    agentId: obj.agentId || null,
+    stopReason: stopReason || null,
+    toolCalls: toolCalls,
   };
 }
 
@@ -476,6 +541,8 @@ function recompute(){
     const p = priceFor(e.model);
     e.cost = (e.inTok*p.in + e.outTok*p.out + e.crTok*p.cacheRead + e.cwTok*p.cacheWrite)/1e6;
   }
+  try { if (window.ClaudeMeter && window.ClaudeMeter.attribution) window.ClaudeMeter.attribution.applyAll(STATE.events); } catch(e){}
+  try { if (window.ClaudeMeter && window.ClaudeMeter.surveillance) window.ClaudeMeter.surveillance.autoEnableIfTeam(STATE.events); } catch(e){}
   safe("kpi",       renderKPIs);
   safe("time",      renderTimeChart);
   safe("rhythm",    renderRhythm);
@@ -489,6 +556,20 @@ function recompute(){
   safe("topSess",   renderTopSessions);
   safe("monthTbl",  renderMonthTable);
   safe("projTbl",   renderProjTable);
+  safe("roiCards",  ()=>{ if (window.ClaudeMeter && window.ClaudeMeter.roiCards) window.ClaudeMeter.roiCards.render(STATE.events); });
+  safe("sunburst",  ()=>{
+    const m = document.getElementById("agentSunburst");
+    const api = window.ClaudeMeter && window.ClaudeMeter.sunburst;
+    if (!m || !api) return;
+    if (!window.__sbInst) window.__sbInst = api.create(m);
+    window.__sbInst.render(STATE.events);
+  });
+  safe("runaway",   ()=>{ const m = document.getElementById("runawayList"); const api = window.ClaudeMeter && window.ClaudeMeter.runawayAlerts; if (m && api) api.render(m, STATE.events); });
+  safe("anomaly",   ()=>{ const m = document.getElementById("anomalyList"); const api = window.ClaudeMeter && window.ClaudeMeter.anomalyFeed; if (m && api) api.render(m, STATE.events); });
+  safe("toolTree",  ()=>{ const m = document.getElementById("toolTreemap"); const api = window.ClaudeMeter && window.ClaudeMeter.toolTreemap; if (m && api) api.render(m, STATE.events); });
+  safe("hookHealth",()=>{ const m = document.getElementById("hookHealth"); const api = window.ClaudeMeter && window.ClaudeMeter.hookHealth; if (m && api) api.render(m, STATE.events); });
+  window.ClaudeMeter = window.ClaudeMeter || {};
+  window.ClaudeMeter.state = STATE;
   if (window.ClaudeMeter && window.ClaudeMeter.hero) window.ClaudeMeter.hero.render();
   if (window.ClaudeMeter && window.ClaudeMeter.chartEnhancers) {
     try { window.ClaudeMeter.chartEnhancers.enhanceTimeChart(); } catch(e){}
@@ -733,8 +814,9 @@ function renderMonthTable(){
 function renderProjTable(){
   const map = new Map();
   for (const e of STATE.events){
-    if (!map.has(e.project)) map.set(e.project,{sessions:new Set(),msgs:0,tok:0,cost:0});
-    const p = map.get(e.project);
+    const key = e.attribution || e.project;
+    if (!map.has(key)) map.set(key,{sessions:new Set(),msgs:0,tok:0,cost:0});
+    const p = map.get(key);
     p.sessions.add(e.session);
     p.msgs++;
     p.tok += e.inTok+e.outTok+e.crTok+e.cwTok;
@@ -743,9 +825,15 @@ function renderProjTable(){
   const rows = [...map.entries()].sort((a,b)=>b[1].cost-a[1].cost).slice(0,25);
   const tbody = document.querySelector("#projTable tbody");
   tbody.innerHTML = "";
+  const displayName = (name)=>{
+    let n = name;
+    try { if (window.ClaudeMeter && window.ClaudeMeter.surveillance) n = window.ClaudeMeter.surveillance.anonymize(n); } catch(e){}
+    try { if (window.ClaudeMeter && window.ClaudeMeter.redact) n = window.ClaudeMeter.redact.apply(n); } catch(e){}
+    return n;
+  };
   for (const [name,p] of rows){
     tbody.insertAdjacentHTML("beforeend",
-      `<tr><td>${name}</td>
+      `<tr><td class="cm-redact-target">${displayName(name)}</td>
         <td class="num">${fmtInt(p.sessions.size)}</td>
         <td class="num">${fmtInt(p.msgs)}</td>
         <td class="num">${fmtTok(p.tok)}</td>
@@ -764,6 +852,13 @@ function generateDemoEvents(){
   const projects = ["claude-statistics","web-app","backend-api","personal-notes","experiments","infra-tools"];
   const models = ["claude-opus-4-7","claude-sonnet-4-6","claude-haiku-4-5"];
   const weights = [0.22, 0.68, 0.10];
+  const teams = ["design-team","brand-team","codebase-audit"];
+  const agentsByTeam = {
+    "design-team":["screen-designer","ui-designer","wireframe-critic"],
+    "brand-team":["brand-strategist","copywriter"],
+    "codebase-audit":["auditor","refactor-planner","test-runner"]
+  };
+  const tools = ["Bash","Read","Edit","Grep","Glob","Write","WebFetch","Task"];
   const pickModel = ()=>{
     const r = Math.random(); let acc = 0;
     for (let i=0; i<models.length; i++){ acc += weights[i]; if (r < acc) return models[i]; }
@@ -786,6 +881,9 @@ function generateDemoEvents(){
       const durationMs = (10 + Math.random()*150) * 60000;
       const sessionBase = new Date(day);
       sessionBase.setHours(hourStart, Math.floor(Math.random()*60), 0, 0);
+      const runaway = Math.random() < 0.18;
+      const hasSub = Math.random() < 0.3;
+      const team = hasSub ? teams[Math.floor(Math.random()*teams.length)] : null;
       for (let m=0; m<msgCount; m++){
         const ts = new Date(sessionBase.getTime() + (m/msgCount)*durationMs + Math.random()*30000);
         const model = pickModel();
@@ -794,7 +892,25 @@ function generateDemoEvents(){
         const outTok = 150 + Math.floor(Math.random()*1800);
         const crTok = cacheWarm ? 4000 + Math.floor(Math.random()*45000) : 0;
         const cwTok = (m === 0 || Math.random() < 0.2) ? 800 + Math.floor(Math.random()*9000) : 0;
-        events.push({ ts, model, inTok, outTok, crTok, cwTok, cost:0, session:sessionId, project });
+        const isSide = hasSub && Math.random() < 0.4;
+        const agentName = isSide ? (agentsByTeam[team][Math.floor(Math.random()*agentsByTeam[team].length)]) : null;
+        const tcalls = {};
+        if (runaway){ tcalls["Bash"] = 3 + Math.floor(Math.random()*3); }
+        else { tcalls[tools[Math.floor(Math.random()*tools.length)]] = 1; }
+        events.push({
+          ts, model, inTok, outTok, crTok, cwTok, cost:0,
+          session:sessionId, project,
+          cwd: "/Users/dan/projects/"+project,
+          gitBranch: "main",
+          uuid: "u-"+Math.random().toString(36).slice(2,10),
+          parentUuid: null,
+          isSidechain: isSide,
+          teamName: isSide ? team : null,
+          agentName: agentName,
+          agentId: agentName ? ("a-"+Math.random().toString(36).slice(2,8)) : null,
+          stopReason: (Math.random() < 0.02 ? "error" : "end_turn"),
+          toolCalls: tcalls,
+        });
       }
     }
   }
@@ -948,6 +1064,57 @@ window.__cmRecompute = recompute;
   if (btnSettings) btnSettings.onclick = function(){
     var d = document.querySelector("details"); if (d) { d.open = true; d.scrollIntoView({behavior:"smooth"}); }
   };
+})();
+</script>
+
+<!-- Wave 2 · Stream 2 (attribution / privacy / ROI cards) -->
+<script src="src/js/attribution.js"></script>
+<script src="src/js/anti-surveillance.js"></script>
+<script src="src/js/redactor.js"></script>
+<script src="src/js/pii-scrubber.js"></script>
+<script src="src/js/roi-cards.js"></script>
+<!-- Wave 2 · Stream 3 (Zone C agents) -->
+<script src="src/js/sunburst.js"></script>
+<script src="src/js/runaway-alerts.js"></script>
+<script src="src/js/anomaly-feed.js"></script>
+<!-- Wave 2 · Stream 4 (Zone D tools) -->
+<script src="src/js/tool-treemap.js"></script>
+<script src="src/js/hook-health.js"></script>
+
+<script>
+(function(){
+  // Expose STATE so later modules can read it.
+  try { window.ClaudeMeter = window.ClaudeMeter || {}; window.ClaudeMeter.state = STATE; } catch(e){}
+  // Stream 2 wiring — roi cards + redact toggle + attribution change listener.
+  try {
+    if (window.ClaudeMeter && window.ClaudeMeter.roiCards){
+      window.ClaudeMeter.roiCards.mount(document.getElementById("roiCards"));
+    }
+  } catch(e){ console.warn("[init] roiCards.mount failed:", e); }
+  try {
+    if (window.ClaudeMeter && window.ClaudeMeter.redact){
+      window.ClaudeMeter.redact.installToggle(document.getElementById("redactToggleHost"));
+      window.ClaudeMeter.redact.onChange(function(){
+        try {
+          if (window.ClaudeMeter.roiCards && STATE.events.length) window.ClaudeMeter.roiCards.render(STATE.events);
+          if (STATE.events.length) safe("projTbl", renderProjTable);
+        } catch(e){ console.warn("[init] redact.onChange rerender failed:", e); }
+      });
+    }
+  } catch(e){ console.warn("[init] redact.installToggle failed:", e); }
+  try {
+    if (window.ClaudeMeter && window.ClaudeMeter.attribution){
+      window.ClaudeMeter.attribution.onChange(function(){
+        if (STATE.events.length){
+          try { window.ClaudeMeter.attribution.applyAll(STATE.events); } catch(e){}
+          try { if (window.ClaudeMeter.roiCards) window.ClaudeMeter.roiCards.render(STATE.events); } catch(e){}
+          try { safe("projTbl", renderProjTable); } catch(e){}
+        }
+      });
+    }
+  } catch(e){ console.warn("[init] attribution.onChange failed:", e); }
+  // Re-render Zone C/D on demo-load (recompute handles subsequent refreshes).
+  if (STATE.events.length){ try { recompute(); } catch(e){} }
 })();
 </script>
 </body>

@@ -1,0 +1,19 @@
+/* A5 - Subagent / team cost sunburst */
+.sb-wrap{display:flex;flex-direction:column;gap:10px}
+.sb-breadcrumb{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--muted,#8a93a6);min-height:20px}
+.sb-breadcrumb .sb-crumb{cursor:pointer;padding:2px 8px;border-radius:999px;background:var(--panel2,#171b24);border:1px solid var(--border,#262b38);color:var(--text,#e6e8ee);transition:.15s}
+.sb-breadcrumb .sb-crumb:hover{border-color:var(--accent,#d97757);color:var(--accent,#d97757)}
+.sb-breadcrumb .sb-sep{color:var(--muted,#8a93a6);opacity:.6}
+.sb-stage{position:relative;display:flex;justify-content:center;align-items:center;min-height:320px}
+.sb-stage svg{max-width:100%;height:auto;display:block;overflow:visible}
+.sb-stage .sb-wedge{cursor:pointer;transition:opacity .15s,stroke-width .15s;stroke:var(--panel,#12151c);stroke-width:1}
+.sb-stage .sb-wedge:hover{opacity:.85;stroke-width:2}
+.sb-stage .sb-center-label{font-size:12px;fill:var(--text,#e6e8ee);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.sb-stage .sb-center-sub{font-size:10px;fill:var(--muted,#8a93a6);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.sb-tooltip{position:absolute;pointer-events:none;background:var(--panel2,#171b24);border:1px solid var(--border,#262b38);border-radius:8px;padding:8px 10px;font-size:12px;color:var(--text,#e6e8ee);box-shadow:0 6px 20px #0006;white-space:nowrap;z-index:20;opacity:0;transition:opacity .1s}
+.sb-tooltip.show{opacity:1}
+.sb-tooltip .sb-tt-title{font-weight:600;margin-bottom:4px}
+.sb-tooltip .sb-tt-row{color:var(--muted,#8a93a6);font-size:11px}
+.sb-legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--muted,#8a93a6);justify-content:center}
+.sb-legend .sb-dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.sb-empty{padding:40px 20px;text-align:center;color:var(--muted,#8a93a6);font-size:13px}

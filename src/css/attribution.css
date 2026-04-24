@@ -1,0 +1,12 @@
+/* Attribution settings UI */
+.cm-attr-settings{margin-top:8px}
+.cm-attr-settings > summary{cursor:pointer;color:var(--muted);font-size:12px;padding:4px 0}
+.cm-attr-body{margin-top:10px;display:flex;flex-direction:column;gap:10px}
+.cm-attr-list{display:flex;flex-direction:column;gap:6px}
+.cm-attr-row{display:grid;grid-template-columns:2fr 1fr auto auto auto;gap:6px;align-items:center}
+.cm-attr-row input{width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.cm-attr-row .btn{padding:4px 8px;font-size:12px;min-width:28px}
+.cm-attr-actions{display:flex;gap:6px;flex-wrap:wrap}
+.cm-attr-actions .btn{padding:6px 10px;font-size:12px}
+.cm-attr-hint{font-size:11px;color:var(--muted)}
+.cm-attr-empty{font-size:12px;color:var(--muted);padding:8px;border:1px dashed var(--border);border-radius:6px;text-align:center}

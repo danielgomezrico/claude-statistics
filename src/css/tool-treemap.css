@@ -1,0 +1,168 @@
+/* Zone D — Tool treemap + Hook health (Wave 2 Stream 4) */
+
+/* Okabe-Ito colorblind-safe palette fallback if not already defined */
+:root {
+  --series-1: #E69F00;
+  --series-2: #56B4E9;
+  --series-3: #009E73;
+  --series-4: #F0E442;
+  --series-5: #0072B2;
+  --series-6: #D55E00;
+  --series-7: #CC79A7;
+  --series-8: #999999;
+  /* Error-rate scale (sequential, green→amber→red, CB-safe) */
+  --err-0:  #1b9e77;
+  --err-10: #d8b365;
+  --err-20: #e66101;
+  --err-30: #b2182b;
+}
+
+#zoneD h2.zone-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 1.2px;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+#zoneD .zone-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.treemap-wrap {
+  position: relative;
+  width: 100%;
+  height: 420px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+}
+
+.treemap-svg { display: block; width: 100%; height: 100%; }
+
+.treemap-tile {
+  cursor: pointer;
+  transition: opacity .15s, stroke-width .15s;
+}
+.treemap-tile:hover { opacity: 0.82; stroke: #fff; stroke-width: 2; }
+
+.treemap-label {
+  pointer-events: none;
+  font-size: 11px;
+  font-weight: 600;
+  fill: #0b0d12;
+  paint-order: stroke;
+  stroke: rgba(255,255,255,0.55);
+  stroke-width: 2;
+}
+.treemap-label.sub { font-size: 10px; font-weight: 400; stroke-width: 1.5; }
+.treemap-label.light { fill: #f4f5f8; stroke: rgba(0,0,0,0.55); }
+
+.treemap-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: 0 6px 20px rgba(0,0,0,.45);
+  z-index: 10;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity .1s;
+}
+.treemap-tooltip.show { opacity: 1; }
+.treemap-tooltip strong { color: var(--accent); }
+.treemap-tooltip .tt-row { color: var(--muted); }
+.treemap-tooltip .tt-row span { color: var(--text); }
+
+.treemap-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.treemap-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.treemap-legend .swatch-row {
+  display: flex; align-items: center; gap: 6px;
+}
+.treemap-legend .scale {
+  display: inline-block; width: 140px; height: 10px; border-radius: 3px;
+  background: linear-gradient(90deg, var(--err-0), var(--err-10), var(--err-20), var(--err-30));
+  border: 1px solid var(--border);
+}
+.treemap-legend .scale-labels {
+  display: flex; justify-content: space-between; width: 140px;
+  font-size: 10px; color: var(--muted);
+}
+
+/* Hook health panel */
+.hook-list { display: flex; flex-direction: column; gap: 6px; }
+
+.hook-row {
+  display: grid;
+  grid-template-columns: 1.4fr 70px 70px 90px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: border-color .12s, transform .12s;
+}
+.hook-row:hover { border-color: var(--accent); transform: translateX(2px); }
+.hook-row .hook-name { font-weight: 600; color: var(--text); }
+.hook-row .hook-bar {
+  position: relative; height: 8px; border-radius: 999px;
+  background: var(--panel); border: 1px solid var(--border); overflow: hidden;
+}
+.hook-row .hook-bar > div {
+  position: absolute; inset: 0 auto 0 0; background: var(--accent2);
+}
+.hook-row.has-errors .hook-bar > div { background: var(--bad); }
+.hook-row .num { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.hook-row .num.err { color: var(--bad); font-weight: 600; }
+.hook-row .num.err.zero { color: var(--good); font-weight: 400; }
+.hook-row .last-seen { color: var(--muted); font-size: 11px; }
+
+.hook-empty {
+  padding: 24px; text-align: center; color: var(--muted); font-size: 13px;
+  background: var(--panel2); border: 1px dashed var(--border); border-radius: 8px;
+}
+
+.hook-header {
+  display: grid;
+  grid-template-columns: 1.4fr 70px 70px 90px 1fr;
+  gap: 10px;
+  padding: 4px 10px;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.hook-header .num { text-align: right; }
+
+@media (max-width: 720px) {
+  .hook-row, .hook-header { grid-template-columns: 1fr 60px 60px 70px; }
+  .hook-row .hook-bar, .hook-header .hook-bar-col { display: none; }
+}
