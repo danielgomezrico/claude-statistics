@@ -1,0 +1,233 @@
+/*
+ * components.css — reusable UI chunks: buttons, pills, tabs, drop zone,
+ * progress bar, select/input, filter bar, hero/insights slots, header controls.
+ */
+
+/* Inputs / buttons */
+select,
+input[type=number],
+input[type=text]{
+  background:var(--panel2);
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:6px 10px;
+  font-size:13px;
+}
+
+.btn{
+  background:var(--panel2);
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:8px 16px;
+  font-size:13px;
+  font-weight:500;
+  cursor:pointer;
+  transition:border-color var(--motion-dur-fast) var(--motion-ease-out), color var(--motion-dur-fast) var(--motion-ease-out);
+}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#e8876a;border-color:#e8876a;color:#fff}
+.btn.small{padding:4px 10px;font-size:12px}
+
+/* Pills */
+.pill{
+  display:inline-block;
+  padding:2px 8px;
+  border-radius:999px;
+  font-size:11px;
+  background:var(--panel2);
+  color:var(--muted);
+  border:1px solid var(--border);
+}
+.pill.good{color:var(--good);border-color:#22c55e44}
+.pill.warn{color:var(--warn);border-color:#eab30844}
+.pill.bad{color:var(--bad);border-color:#ef444444}
+
+/* Tab bar */
+.tabbar{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
+.tab{
+  padding:6px 12px;
+  border-radius:8px;
+  cursor:pointer;
+  background:var(--panel2);
+  border:1px solid var(--border);
+  font-size:12px;
+}
+.tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* Segmented 3-way control (motion + theme) */
+.seg{
+  display:inline-flex;
+  border:1px solid var(--border);
+  border-radius:8px;
+  overflow:hidden;
+  background:var(--panel2);
+}
+.seg button{
+  appearance:none;
+  background:transparent;
+  color:var(--muted);
+  border:0;
+  padding:6px 10px;
+  font-size:12px;
+  cursor:pointer;
+  transition:background var(--motion-dur-fast) var(--motion-ease-out), color var(--motion-dur-fast) var(--motion-ease-out);
+}
+.seg button.active{background:var(--panel);color:var(--text)}
+.seg button:not(:last-child){border-right:1px solid var(--border)}
+
+/* Drop zone */
+.drop{
+  border:2px dashed var(--border);
+  border-radius:12px;
+  padding:40px;
+  text-align:center;
+  background:var(--panel);
+  transition:border-color var(--motion-dur-base) var(--motion-ease-out), background var(--motion-dur-base) var(--motion-ease-out);
+  cursor:pointer;
+}
+.drop.hover{border-color:var(--accent);background:var(--panel2)}
+.drop input{display:none}
+.drop .fallback-link{
+  display:inline-block;
+  margin-top:10px;
+  font-size:12px;
+  color:var(--accent2);
+  text-decoration:underline;
+  cursor:pointer;
+  background:none;
+  border:0;
+  padding:0;
+}
+
+/* Progress */
+.progress{
+  margin-top:12px;
+  height:8px;
+  background:var(--panel2);
+  border-radius:999px;
+  overflow:hidden;
+  border:1px solid var(--border);
+  display:none;
+}
+.progress.show{display:block}
+.progress .bar{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,var(--accent),#f0a07f);
+  transition:width .1s linear;
+}
+
+/* Demo banner/row */
+.demo-row{
+  margin-top:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  color:var(--muted);
+  font-size:12px;
+}
+.demo-row::before,.demo-row::after{content:"";flex:0 0 60px;height:1px;background:var(--border)}
+.demo-banner{
+  background:linear-gradient(90deg,#d9775722,#6ea8ff22);
+  border:1px solid var(--accent);
+  border-radius:10px;
+  padding:10px 14px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom:4px;
+}
+.demo-banner strong{color:var(--accent)}
+
+/* GitHub link */
+.gh-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:36px;
+  height:36px;
+  border-radius:10px;
+  background:var(--panel2);
+  border:1px solid var(--border);
+  color:var(--muted);
+  transition:color var(--motion-dur-fast) var(--motion-ease-out), border-color var(--motion-dur-fast) var(--motion-ease-out), transform var(--motion-dur-fast) var(--motion-ease-out), box-shadow var(--motion-dur-fast) var(--motion-ease-out);
+  text-decoration:none;
+}
+.gh-link:hover{color:var(--accent);border-color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 12px #d9775733}
+.gh-link svg{width:20px;height:20px;display:block}
+
+/* Header controls cluster */
+.header-controls{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.header-controls > div{display:flex;flex-direction:column}
+
+/* Global filter bar (sticky below header) */
+.filter-bar{
+  position:sticky;
+  top:0;
+  z-index:10;
+  background:var(--bg);
+  border-bottom:1px solid var(--border);
+  padding:10px 24px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.filter-bar .fb-group{display:flex;flex-direction:column;gap:2px}
+.filter-bar .fb-group label{margin:0;font-size:10px}
+.filter-bar select,
+.filter-bar input[type=text]{
+  min-width:130px;
+  font-size:12px;
+  padding:4px 8px;
+}
+.filter-bar .fb-check{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  color:var(--muted);
+  cursor:pointer;
+}
+.filter-bar .fb-spacer{flex:1}
+
+/* Hero + insights slots (scaffold; Feature Agent A / C will fill) */
+#hero-slot{
+  min-height:40px;
+}
+#insights-slot{
+  display:grid;
+  gap:12px;
+  grid-template-columns:repeat(3, 1fr);
+}
+@media (max-width:900px){
+  #insights-slot{grid-template-columns:1fr}
+}
+.insight-card{
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:14px 16px;
+  min-height:96px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  transition:border-color var(--motion-dur-base) var(--motion-ease-out), opacity var(--motion-dur-base) var(--motion-ease-out);
+}
+.insight-card .ic-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.insight-card .ic-body{font-size:13px;color:var(--text);line-height:1.45}
+.insight-card.severity-good{border-color:#22c55e55}
+.insight-card.severity-warn{border-color:#eab30855}
+.insight-card.severity-bad{border-color:#ef444455}
+.insight-card.placeholder{opacity:0.6}

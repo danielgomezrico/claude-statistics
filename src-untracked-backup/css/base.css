@@ -1,0 +1,80 @@
+/*
+ * base.css — reset, typography, CSS custom properties.
+ * Owns: theme tokens (dark default + light override), Okabe-Ito series palette,
+ * motion duration/easing tokens.
+ */
+
+:root{
+  /* Dark theme (default). Mirrored in [data-theme="light"] below. */
+  --bg:#0b0d12;
+  --panel:#12151c;
+  --panel2:#171b24;
+  --border:#262b38;
+  --text:#e6e8ee;
+  --muted:#a7afc2;          /* bumped from #8a93a6 to pass WCAG AA body text */
+  --accent:#d97757;
+  --accent2:#6ea8ff;
+  --good:#22c55e;
+  --warn:#eab308;
+  --bad:#ef4444;
+  --focus:#6ea8ff;
+
+  /* Okabe-Ito colorblind-safe series palette (report 03 §8.2).
+     Reserve series-1=orange for Opus, series-2=sky for Sonnet, series-3=green for Haiku. */
+  --series-1:#e69f00;
+  --series-2:#56b4e9;
+  --series-3:#009e73;
+  --series-4:#f0e442;
+  --series-5:#0072b2;
+  --series-6:#d55e00;
+  --series-7:#cc79a7;
+  --series-8:#000000;
+
+  /* Motion tokens (report 04). */
+  --motion-dur-fast: 100ms;
+  --motion-dur-base: 220ms;
+  --motion-dur-slow: 400ms;
+  --motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-ease-inout: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="light"]{
+  --bg:#fafafa;
+  --panel:#ffffff;
+  --panel2:#f3f4f6;
+  --border:#e5e7eb;
+  --text:#1a1a1a;
+  --muted:#6b7280;
+  --accent:#d97757;
+  --accent2:#2563eb;
+  --good:#16a34a;
+  --warn:#ca8a04;
+  --bad:#dc2626;
+  --focus:#2563eb;
+
+  /* Light-theme series — black swap: use dark gray instead of pure black. */
+  --series-8:#1f2937;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif;
+  font-size:14px;
+  line-height:1.5;
+}
+
+h1{margin:0;font-size:18px;font-weight:600}
+h2{margin:0 0 12px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+
+.muted{color:var(--muted)}
+.hidden{display:none}
+
+:focus-visible{
+  outline:2px solid var(--focus);
+  outline-offset:2px;
+  border-radius:6px;
+}

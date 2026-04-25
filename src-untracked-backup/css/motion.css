@@ -1,0 +1,31 @@
+/*
+ * motion.css — keyframes, utility transitions, reduced-motion overrides.
+ * Feature Agent D will add A7 anomaly-pulse, A12 heatmap wave, etc. here.
+ *
+ * Two mechanisms for "no motion":
+ *   1. @media (prefers-reduced-motion: reduce)  — honors OS setting.
+ *   2. body.rm-off                              — explicit user toggle (set by motion.js).
+ */
+
+/* Utility fade class used for theme/toggle transitions. */
+.fade-in{transition:opacity var(--motion-dur-base) var(--motion-ease-out)}
+
+/* System-preference reduced motion. */
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration:0.01ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:0.01ms !important;
+    scroll-behavior:auto !important;
+  }
+}
+
+/* Explicit user override (Motion: None). Same behavior. */
+body.rm-off *,
+body.rm-off *::before,
+body.rm-off *::after{
+  animation-duration:0.01ms !important;
+  animation-iteration-count:1 !important;
+  transition-duration:0.01ms !important;
+  scroll-behavior:auto !important;
+}
