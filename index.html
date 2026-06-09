@@ -491,7 +491,9 @@ async function ingest(files){
   if (!workerOk){
     for (let i=0; i<jsonl.length; i++){
       const f = jsonl[i];
-      const text = await f.text();
+      let text;
+      try { text = await f.text(); }
+      catch(err){ console.warn("[ingest] file read failed:", f.name, err); bytes += f.size; continue; }
       const lines = text.split("\n");
       const proj = (f.webkitRelativePath||f.name).split("/").slice(-2,-1)[0] || "unknown";
       for (const line of lines){
@@ -540,76 +542,101 @@ async function tryWorkerParse(jsonl, totalBytes, bar, statusEl){
   try { worker = new Worker("src/js/parser.worker.js"); }
   catch(e){ console.warn("[worker] construct failed, falling back:", e); return false; }
 
-  // Read all files in main thread (FileReader / .text() requires main-thread
-  // File handles), then ship the text to the worker for parsing.
-  const fileBundle = [];
-  for (let i=0; i<jsonl.length; i++){
-    const f = jsonl[i];
-    let text = "";
-    try { text = await f.text(); }
-    catch(e){ console.warn("[worker] file read failed:", f.name, e); continue; }
-    fileBundle.push({
-      name: f.name,
-      relPath: f.webkitRelativePath || f.name,
-      size: f.size || text.length,
-      text: text,
-    });
+  // Stream files one-by-one to the worker instead of bundling everything
+  // (a single ~1 GB postMessage triggers DataCloneError on most browsers).
+  const tStart = performance.now();
+  let bytesDone = 0;
+  let total = 0;
+  let workerErrored = false;
+
+  worker.onerror = (err) => {
+    console.warn("[worker] error:", err && err.message);
+    workerErrored = true;
+  };
+  worker.onmessage = (e) => {
+    const m = e.data || {};
+    if (m.type === "events"){
+      for (let i=0; i<m.batch.length; i++){
+        const ev = m.batch[i];
+        ev.ts = new Date(ev.ts);
+        STATE.events.push(ev);
+      }
+      total += m.batch.length;
+    } else if (m.type === "error"){
+      console.warn("[worker] parse error:", m.message);
+      workerErrored = true;
+    }
+  };
+
+  try { worker.postMessage({ type: "init", pricing: PRICING }); }
+  catch(e){
+    console.warn("[worker] init failed, falling back:", e);
+    try { worker.terminate(); } catch(_){}
+    return false;
   }
 
+  for (let i = 0; i < jsonl.length; i++){
+    if (workerErrored){ try { worker.terminate(); } catch(_){} return false; }
+    const f = jsonl[i];
+    let text;
+    try { text = await f.text(); }
+    catch(e){
+      console.warn("[worker] file read failed:", f.name, e);
+      bytesDone += (f.size || 0);
+      continue;
+    }
+    try {
+      worker.postMessage({
+        type: "file",
+        name: f.name,
+        relPath: f.webkitRelativePath || f.name,
+        text: text,
+      });
+    } catch(e){
+      console.warn("[worker] file postMessage failed:", f.name, e);
+      try { worker.terminate(); } catch(_){}
+      return false;
+    }
+    bytesDone += (f.size || text.length || 0);
+    if (bar) bar.style.width = ((bytesDone/totalBytes)*100).toFixed(1) + "%";
+    if (i % 25 === 0 || i === jsonl.length-1){
+      if (statusEl){
+        const mb = (bytesDone/1048576).toFixed(1);
+        const mbTot = (totalBytes/1048576).toFixed(1);
+        statusEl.textContent = `Parsing (worker) ${i+1}/${jsonl.length} files · ${mb}/${mbTot} MB · ${fmtInt(total)} events`;
+      }
+      // Yield so UI updates and pending worker messages drain.
+      await new Promise(r=>setTimeout(r,0));
+    }
+  }
+
+  // Wait for worker to drain and finish.
   return await new Promise((resolve) => {
-    let done = false, errored = false;
-    const tStart = performance.now();
-    worker.onerror = (err) => {
-      console.warn("[worker] error, falling back:", err && err.message);
-      errored = true;
-      try { worker.terminate(); } catch(e){}
-      resolve(false);
-    };
+    let resolved = false;
+    const finish = (ok) => { if (resolved) return; resolved = true; try { worker.terminate(); } catch(_){} resolve(ok); };
     worker.onmessage = (e) => {
       const m = e.data || {};
-      if (m.type === "progress"){
-        const pct = m.bytesTotal ? (m.bytesDone / m.bytesTotal * 100) : 0;
-        if (bar) bar.style.width = pct.toFixed(1) + "%";
-        if (statusEl){
-          const mb = (m.bytesDone/1048576).toFixed(1);
-          const mbTot = (m.bytesTotal/1048576).toFixed(1);
-          statusEl.textContent = `Parsing (worker) ${m.filesDone}/${m.filesTotal} files · ${mb}/${mbTot} MB · ${fmtInt(m.eventsSoFar)} events`;
-        }
-      } else if (m.type === "events"){
-        // Re-hydrate ts string -> Date for downstream consumers.
+      if (m.type === "events"){
         for (let i=0; i<m.batch.length; i++){
           const ev = m.batch[i];
           ev.ts = new Date(ev.ts);
           STATE.events.push(ev);
         }
+        total += m.batch.length;
       } else if (m.type === "done"){
-        done = true;
-        try { worker.terminate(); } catch(e){}
         const secs = ((performance.now()-tStart)/1000).toFixed(1);
-        if (statusEl) statusEl.textContent = `Worker parsed ${fmtInt(m.total)} events in ${secs}s.`;
-        resolve(true);
+        if (statusEl) statusEl.textContent = `Worker parsed ${fmtInt(total)} events in ${secs}s.`;
+        finish(true);
       } else if (m.type === "error"){
-        console.warn("[worker] parse error, falling back:", m.message);
-        errored = true;
-        try { worker.terminate(); } catch(e){}
-        resolve(false);
+        console.warn("[worker] parse error on finish:", m.message);
+        finish(false);
       }
     };
-    try {
-      worker.postMessage({ type:"parse", files: fileBundle, pricing: PRICING });
-    } catch(e){
-      console.warn("[worker] postMessage failed:", e);
-      try { worker.terminate(); } catch(_){}
-      resolve(false);
-    }
-    // Safety timeout — if worker doesn't finish in 5 minutes, bail.
-    setTimeout(() => {
-      if (!done && !errored){
-        console.warn("[worker] timeout, falling back");
-        try { worker.terminate(); } catch(e){}
-        resolve(false);
-      }
-    }, 5*60*1000);
+    worker.onerror = (err) => { console.warn("[worker] error on finish:", err && err.message); finish(false); };
+    try { worker.postMessage({ type: "finish" }); }
+    catch(e){ console.warn("[worker] finish postMessage failed:", e); finish(false); }
+    // Safety timeout — if worker doesn't finish draining in 5 minutes, accept what we have.
+    setTimeout(() => finish(true), 5*60*1000);
   });
 }
 window.tryWorkerParse = tryWorkerParse;

@@ -88,13 +88,54 @@ function extractEvent(obj, proj, pricing) {
   };
 }
 
+var streamPricing = DEFAULT_PRICING;
+var streamBatch = [];
+var streamTotal = 0;
+var STREAM_BATCH_SIZE = 1000;
+
+function flushStreamBatch() {
+  if (streamBatch.length) {
+    self.postMessage({ type: 'events', batch: streamBatch });
+    streamBatch = [];
+  }
+}
+
+function processFile(name, relPath, text) {
+  var proj = (relPath || name || '').split('/').slice(-2, -1)[0] || 'unknown';
+  var lines = text.split('\n');
+  for (var j = 0; j < lines.length; j++) {
+    var line = lines[j];
+    if (!line || !line.trim()) continue;
+    var obj;
+    try { obj = JSON.parse(line); } catch (_) { continue; }
+    var ev = extractEvent(obj, proj, streamPricing);
+    if (!ev) continue;
+    streamBatch.push(ev); streamTotal++;
+    if (streamBatch.length >= STREAM_BATCH_SIZE) flushStreamBatch();
+  }
+}
+
 self.onmessage = function (e) {
   var msg = e.data || {};
-  if (msg.type !== 'parse') return;
-  var files = msg.files || [];
-  var pricing = msg.pricing || DEFAULT_PRICING;
-  try { parseAll(files, pricing); }
-  catch (err) { self.postMessage({ type: 'error', message: String(err && err.message || err) }); }
+  try {
+    if (msg.type === 'init') {
+      streamPricing = msg.pricing || DEFAULT_PRICING;
+      streamBatch = [];
+      streamTotal = 0;
+    } else if (msg.type === 'file') {
+      processFile(msg.name, msg.relPath, msg.text || '');
+    } else if (msg.type === 'finish') {
+      flushStreamBatch();
+      self.postMessage({ type: 'done', total: streamTotal });
+    } else if (msg.type === 'parse') {
+      // Legacy bulk path — still supported for callers that fit in a single message.
+      var files = msg.files || [];
+      var pricing = msg.pricing || DEFAULT_PRICING;
+      parseAll(files, pricing);
+    }
+  } catch (err) {
+    self.postMessage({ type: 'error', message: String(err && err.message || err) });
+  }
 };
 
 function parseAll(files, pricing) {
