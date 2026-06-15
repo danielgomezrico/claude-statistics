@@ -157,6 +157,7 @@
           <div class="hero-tile"><div class="v" id="tileVsAvg">—</div><div class="k">× 7d avg</div></div>
           <div class="hero-tile"><div class="v" id="tileProjected">$0</div><div class="k">/ mo projected</div></div>
         </div>
+        <div class="hero-alltime muted" id="heroAllTime" style="font-size:12px;margin-top:8px">All-time: <strong>—</strong> tokens · <strong>—</strong> API-equivalent</div>
         <div class="hero-trust" id="heroTrust">Reconciled to ccusage within —% · last parse —</div>
         <div class="hero-share">
           <button type="button" class="btn" id="shareStripPill">Share pill PNG</button>
@@ -450,6 +451,15 @@ async function walk(entry, out){
 }
 
 async function ingest(files){
+  // Loading real files always exits demo mode — never mix synthetic events
+  // with the user's own data, and hide the demo banner.
+  const demoBanner = document.getElementById("demoBanner");
+  if (demoBanner && !demoBanner.classList.contains("hidden")){
+    STATE.events = [];
+    Object.keys(STATE.charts).forEach(destroyChart);
+    demoBanner.classList.add("hidden");
+  }
+
   let jsonl = files.filter(f=>f.name.endsWith(".jsonl"));
   const underProjects = jsonl.filter(f=>(f.webkitRelativePath||"").includes("/projects/") || (f.webkitRelativePath||"").startsWith("projects/"));
   if (underProjects.length) jsonl = underProjects;
@@ -803,6 +813,9 @@ function renderKPIs(){
   document.getElementById("kpiTokens").textContent = fmtTok(tot);
   document.getElementById("kpiBreakdown").textContent = `in ${fmtTok(inTok)} · out ${fmtTok(outTok)} · cache r/w ${fmtTok(crTok)}/${fmtTok(cwTok)}`;
 
+  const allTime = document.getElementById("heroAllTime");
+  if (allTime) allTime.innerHTML = `All-time: <strong>${fmtTok(tot)}</strong> tokens · <strong>${fmt$(total)}</strong> API-equivalent`;
+
   const plan = parseFloat(document.getElementById("plan").value)||0;
   const now = new Date();
   const mStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -1054,7 +1067,9 @@ function renderProjTable(){
 }
 
 document.getElementById("plan").addEventListener("change",()=>{
-  if(STATE.events.length){ safe("kpi",renderKPIs); safe("cum",renderCumulative); safe("monthTbl",renderMonthTable); }
+  // Re-run the full pipeline so plan-dependent views (hero pill, ROI cards,
+  // cumulative chart, month table) all reflect the new subscription.
+  if(STATE.events.length){ recompute(); }
 });
 
 function generateDemoEvents(){
