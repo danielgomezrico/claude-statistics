@@ -132,9 +132,9 @@
     <div id="status" class="muted" style="margin-top:10px;font-size:12px"></div>
     <div class="progress" id="progress"><div class="bar" id="progressBar"></div></div>
     <div class="muted" style="margin-top:14px;font-size:11px">
-      Firefox / Arc: pick files manually (shift-click to multi-select)
-      <label for="filesFallback" class="btn small" style="display:inline-block;margin-left:6px;padding:4px 10px;font-size:11px;cursor:pointer">Choose .jsonl files</label>
-      <input type="file" id="filesFallback" multiple accept=".jsonl" style="display:none" />
+      Using Claude Cowork (desktop)? Also point it at<br>
+      <code>~/Library/Application&nbsp;Support/Claude/local-agent-mode-sessions/</code> (macOS) or<br>
+      <code>%APPDATA%\Claude\local-agent-mode-sessions\</code> (Windows) — drop the whole <code>Claude/</code> folder to include both.
     </div>
     <div class="demo-row">or</div>
     <button type="button" class="btn primary" id="demoBtn">See demo with sample data</button>
@@ -421,19 +421,6 @@ drop.addEventListener("drop",async e=>{
 });
 filesInput.addEventListener("change",async e=>{ await ingest([...e.target.files]); });
 
-const filesFallback = document.getElementById("filesFallback");
-if (filesFallback){
-  filesFallback.addEventListener("click", e=>e.stopPropagation());
-  filesFallback.addEventListener("change", async e=>{
-    e.stopPropagation();
-    await ingest([...e.target.files]);
-  });
-  // Prevent clicks on the fallback label / container from bubbling up to the
-  // drop zone (which would open the directory picker).
-  const fallbackLabel = document.querySelector('label[for="filesFallback"]');
-  if (fallbackLabel) fallbackLabel.addEventListener("click", e=>e.stopPropagation());
-}
-
 async function walk(entry, out){
   if (entry.isFile){
     await new Promise(res=>entry.file(f=>{ out.push(f); res(); }));
@@ -461,8 +448,16 @@ async function ingest(files){
   }
 
   let jsonl = files.filter(f=>f.name.endsWith(".jsonl"));
-  const underProjects = jsonl.filter(f=>(f.webkitRelativePath||"").includes("/projects/") || (f.webkitRelativePath||"").startsWith("projects/"));
-  if (underProjects.length) jsonl = underProjects;
+  // Keep only transcripts: Claude Code logs live under `projects/`, Claude
+  // Cowork (desktop) logs under `local-agent-mode-sessions/`. Both contain
+  // usage-bearing JSONL; everything else at the `.claude/` root (history.jsonl,
+  // plugin caches) is noise.
+  const isTranscript = f=>{
+    const p = f.webkitRelativePath||"";
+    return p.includes("/projects/") || p.startsWith("projects/") || p.includes("local-agent-mode-sessions");
+  };
+  const transcripts = jsonl.filter(isTranscript);
+  if (transcripts.length) jsonl = transcripts;
   if (!jsonl.length){ statusEl.textContent="No .jsonl files found."; return; }
 
   const progress = document.getElementById("progress");
@@ -505,7 +500,7 @@ async function ingest(files){
       try { text = await f.text(); }
       catch(err){ console.warn("[ingest] file read failed:", f.name, err); bytes += f.size; continue; }
       const lines = text.split("\n");
-      const proj = (f.webkitRelativePath||f.name).split("/").slice(-2,-1)[0] || "unknown";
+      const proj = deriveProject(f.webkitRelativePath||f.name);
       for (const line of lines){
         if (!line.trim()) continue;
         let obj; try { obj = JSON.parse(line); } catch { continue; }
@@ -650,6 +645,16 @@ async function tryWorkerParse(jsonl, totalBytes, bar, statusEl){
   });
 }
 window.tryWorkerParse = tryWorkerParse;
+
+// Derive a project label from a file's relative path. Claude Cowork transcripts
+// sit under a synthetic, opaque encoded folder name — group them all as
+// "cowork" instead. Claude Code transcripts use the second-to-last path segment
+// (the url-encoded project dir).
+function deriveProject(relPath, name){
+  const p = relPath || name || "";
+  if (p.includes("local-agent-mode-sessions")) return "cowork";
+  return p.split("/").slice(-2,-1)[0] || "unknown";
+}
 
 function extractEvent(obj, proj){
   const msg = obj.message || obj;

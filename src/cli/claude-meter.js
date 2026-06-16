@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /* claude-meter — F18 library-mode CLI export.
  *
- * Walks a Claude projects dir (default: ~/.claude/projects), parses all
- * *.jsonl files using the shared parser-core, and prints JSON aggregates
- * identical in shape to the browser's "Export all" output.
+ * Walks a Claude projects dir (default: ~/.claude/projects) plus the Claude
+ * Cowork sessions dir, parses all *.jsonl files using the shared parser-core,
+ * and prints JSON aggregates identical in shape to the browser's "Export all"
+ * output. Cowork usage is grouped under the "cowork" project.
  *
  * Usage:
  *   node src/cli/claude-meter.js [--json] [--path ~/.claude/projects] [--help]
@@ -34,14 +35,15 @@ function parseArgs(argv){
 
 function usage(){
   return [
-    "claude-meter — JSON export of ~/.claude/projects usage.",
+    "claude-meter — JSON export of Claude Code + Cowork usage.",
     "",
     "Usage:",
     "  claude-meter [--json] [--path <dir>]",
     "",
     "Options:",
     "  --json           Emit JSON (default when stdout is not a TTY).",
-    "  --path <dir>     Path to projects dir (default: ~/.claude/projects).",
+    "  --path <dir>     Scan only this dir. Default: ~/.claude/projects plus the",
+    "                   Claude Cowork sessions dir (grouped as \"cowork\").",
     "  -h, --help       Show this help and exit.",
     "",
     "Example:",
@@ -65,11 +67,28 @@ function walkJsonl(dir, out){
 }
 
 function projectNameFor(filePath, rootPath){
-  // Claude stores files as <projects>/<encoded-cwd>/<session>.jsonl
-  // Use the first segment under rootPath.
+  // Claude Cowork transcripts live under an opaque encoded session folder —
+  // group them all as "cowork".
+  if (filePath.indexOf("local-agent-mode-sessions") >= 0) return "cowork";
+  // Claude Code stores files as <projects>/<encoded-cwd>/<session>.jsonl —
+  // use the first segment under rootPath.
   var rel = path.relative(rootPath, filePath);
   var parts = rel.split(path.sep);
   return parts[0] || "unknown";
+}
+
+// Default Claude Cowork (desktop) session dir per platform. Returns null when
+// the platform location is unknown.
+function coworkRoot(){
+  var home = os.homedir();
+  if (process.platform === "darwin"){
+    return path.join(home, "Library", "Application Support", "Claude", "local-agent-mode-sessions");
+  }
+  if (process.platform === "win32"){
+    var appData = process.env.APPDATA || path.join(home, "AppData", "Roaming");
+    return path.join(appData, "Claude", "local-agent-mode-sessions");
+  }
+  return path.join(home, ".config", "Claude", "local-agent-mode-sessions");
 }
 
 function main(){
@@ -79,21 +98,36 @@ function main(){
     process.exit(0);
   }
 
-  var root = args.path || path.join(os.homedir(), ".claude", "projects");
-  if (!fs.existsSync(root)){
-    process.stderr.write("claude-meter: path does not exist: " + root + "\n");
+  // Roots to scan. With --path, scan exactly that. Otherwise scan both the
+  // Claude Code projects dir and the Claude Cowork sessions dir (if present).
+  var roots;
+  if (args.path){
+    roots = [args.path];
+  } else {
+    roots = [path.join(os.homedir(), ".claude", "projects")];
+    var cw = coworkRoot();
+    if (cw && fs.existsSync(cw)) roots.push(cw);
+  }
+  roots = roots.filter(function(r){ return fs.existsSync(r); });
+  if (!roots.length){
+    process.stderr.write("claude-meter: no Claude logs found (looked in ~/.claude/projects and Cowork sessions).\n");
     process.stderr.write("Hint: pass --path to point at a custom location.\n");
     process.exit(2);
   }
 
   var files = [];
-  walkJsonl(root, files);
+  var fileRoot = {};
+  for (var r=0;r<roots.length;r++){
+    var before = files.length;
+    walkJsonl(roots[r], files);
+    for (var k=before;k<files.length;k++) fileRoot[files[k]] = roots[r];
+  }
 
   var events = [];
   for (var i=0;i<files.length;i++){
     var f = files[i];
     var text; try { text = fs.readFileSync(f, "utf8"); } catch(e){ continue; }
-    var proj = projectNameFor(f, root);
+    var proj = projectNameFor(f, fileRoot[f]);
     var evs = parser.parseJsonlText(text, proj);
     for (var j=0;j<evs.length;j++) events.push(evs[j]);
   }
@@ -101,7 +135,7 @@ function main(){
   var agg = parser.aggregate(events);
   var report = {
     generatedAt: new Date().toISOString(),
-    sourcePath: root,
+    sourcePath: roots.join(path.delimiter),
     fileCount: files.length,
     totals: agg.totals,
     byModel: agg.byModel,

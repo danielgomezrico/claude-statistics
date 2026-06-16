@@ -32,6 +32,15 @@ var DEFAULT_PRICING = [
   { match: '',       in:  3.00, out: 15.00, cacheRead: 0.30, cacheWrite:  3.75 },
 ];
 
+// Mirror of deriveProject() in index.html: Claude Cowork transcripts live under
+// an opaque encoded folder, so group them as "cowork"; Claude Code transcripts
+// use the second-to-last path segment (the url-encoded project dir).
+function deriveProject(relPath, name) {
+  var p = relPath || name || '';
+  if (p.indexOf('local-agent-mode-sessions') >= 0) return 'cowork';
+  return p.split('/').slice(-2, -1)[0] || 'unknown';
+}
+
 function priceFor(pricing, model) {
   var m = (model || '').toLowerCase();
   for (var i = 0; i < pricing.length; i++) {
@@ -101,7 +110,7 @@ function flushStreamBatch() {
 }
 
 function processFile(name, relPath, text) {
-  var proj = (relPath || name || '').split('/').slice(-2, -1)[0] || 'unknown';
+  var proj = deriveProject(relPath, name);
   var lines = text.split('\n');
   for (var j = 0; j < lines.length; j++) {
     var line = lines[j];
@@ -148,7 +157,7 @@ function parseAll(files, pricing) {
   for (var i = 0; i < files.length; i++) {
     var f = files[i];
     var text = f.text || '';
-    var proj = (f.relPath || f.name || '').split('/').slice(-2, -1)[0] || 'unknown';
+    var proj = deriveProject(f.relPath, f.name);
     var lines = text.split('\n');
     for (var j = 0; j < lines.length; j++) {
       var line = lines[j];

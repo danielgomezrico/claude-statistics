@@ -5,13 +5,17 @@ An independent auditor of your local JSONL against Anthropic's metering drift. A
 ## Usage
 
 1. Open `index.html` in any modern browser (or visit the GitHub Pages deployment).
-2. Click the dropzone (or drag) and select `~/.claude/` (or `~/.claude/projects/`).
+2. Click the dropzone (or drag) and select a **folder** — `~/.claude/` (or `~/.claude/projects/`). The picker only accepts folders, never individual files.
    - `Cmd+Shift+.` in the Finder file picker reveals hidden folders.
+   - **Claude Cowork (desktop)?** Also point it at the Cowork sessions dir:
+     - macOS: `~/Library/Application Support/Claude/local-agent-mode-sessions/`
+     - Windows: `%APPDATA%\Claude\local-agent-mode-sessions\`
+     - Drop the whole `Claude/` app-support folder to include both at once.
    - Or hit **See demo with sample data** to explore with synthetic usage.
 3. Pick your subscription tier in the top-right selector.
 4. Watch the progress bar while events parse in a few seconds.
 
-The dashboard only reads files under `projects/` — plugin caches and other JSONL in `.claude/` are ignored.
+The dashboard only reads JSONL transcripts under `projects/` (Claude Code) and `local-agent-mode-sessions/` (Claude Cowork, grouped as the `cowork` project) — plugin caches and other JSONL in `.claude/` are ignored.
 
 ## What you see
 
