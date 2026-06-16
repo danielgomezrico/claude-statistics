@@ -95,6 +95,38 @@
   .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:var(--panel2);border:1px solid var(--border);color:var(--muted);cursor:pointer;padding:0;transition:.15s}
   .icon-btn:hover{color:var(--accent);border-color:var(--accent)}
   .icon-btn svg{display:block}
+
+  /* Wave 4 — modular layout: top overview + collapsible modules */
+  #dash:not(.hidden){display:grid;gap:14px}
+  .overview{background:linear-gradient(135deg,var(--panel),var(--panel2));border:1px solid var(--border);border-radius:14px;padding:20px}
+  .ov-head{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .ov-head h2{margin:0;font-size:14px;color:var(--text);text-transform:none;letter-spacing:0}
+  .ov-head .ov-range{font-size:12px;color:var(--muted)}
+  .ov-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  @media (max-width:900px){.ov-grid{grid-template-columns:repeat(2,1fr)}}
+  .ov-tile{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px}
+  .ov-tile .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .ov-tile .v{font-size:23px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums}
+  .ov-tile .s{font-size:11px;color:var(--muted);margin-top:4px}
+  .ov-projects{margin-top:18px}
+  .ov-projects h2{margin:0 0 10px;font-size:12px}
+  .ov-bar-row{display:grid;grid-template-columns:150px 1fr auto;align-items:center;gap:12px;margin-bottom:8px;font-size:13px}
+  .ov-bar-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+  .ov-bar-track{height:10px;background:var(--panel2);border-radius:999px;overflow:hidden;border:1px solid var(--border)}
+  .ov-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),#f0a07f);border-radius:999px;min-width:2px}
+  .ov-bar-val{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;white-space:nowrap}
+  @media (max-width:600px){.ov-bar-row{grid-template-columns:90px 1fr auto}}
+
+  details.module{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin:0}
+  details.module>summary{list-style:none;cursor:pointer;padding:14px 18px;display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:var(--text);user-select:none}
+  details.module>summary::-webkit-details-marker{display:none}
+  details.module>summary::after{content:"";margin-left:auto;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .2s;flex:0 0 auto}
+  details.module[open]>summary::after{transform:rotate(-135deg)}
+  details.module>summary:hover{background:var(--panel2)}
+  details.module>summary .mod-icon{font-size:16px;flex:0 0 auto}
+  details.module>summary .mod-sub{font-weight:400;color:var(--muted);font-size:12px;margin-left:2px}
+  details.module[open]>summary{border-bottom:1px solid var(--border)}
+  .module-body{padding:18px;display:grid;gap:16px}
 </style>
 </head>
 <body>
@@ -147,6 +179,29 @@
       <button type="button" class="btn" id="exitDemoBtn">Exit demo</button>
     </div>
 
+    <!-- OVERVIEW · all-time summary of everything + top projects (always visible) -->
+    <section class="overview" id="overview" aria-label="Overview — all-time summary">
+      <div class="ov-head">
+        <h2>Overview <span class="muted" style="font-weight:400">· all-time totals across every module</span></h2>
+        <div class="ov-range" id="ovRange">—</div>
+      </div>
+      <div class="ov-grid">
+        <div class="ov-tile"><div class="k">Total cost (API eq.)</div><div class="v" id="ovTotal">$0</div><div class="s" id="ovTotalSub">—</div></div>
+        <div class="ov-tile"><div class="k">Tokens</div><div class="v" id="ovTokens">0</div><div class="s" id="ovTokensSub">—</div></div>
+        <div class="ov-tile"><div class="k">Sessions</div><div class="v" id="ovSessions">0</div><div class="s" id="ovSessionsSub">—</div></div>
+        <div class="ov-tile"><div class="k">Messages</div><div class="v" id="ovMsgs">0</div><div class="s" id="ovMsgsSub">—</div></div>
+        <div class="ov-tile"><div class="k">Subscription ROI</div><div class="v" id="ovRoi">—</div><div class="s" id="ovRoiSub">this month</div></div>
+      </div>
+      <div class="ov-projects">
+        <h2>Top 5 projects by spend</h2>
+        <div id="top5Projects"><div class="muted" style="font-size:12px">—</div></div>
+      </div>
+    </section>
+
+    <!-- MODULE · Spend & money -->
+    <details class="module" id="modMoney">
+      <summary><span class="mod-icon">💰</span> Spend &amp; money <span class="mod-sub">hero · spend over time · model split · cumulative vs subscription</span></summary>
+      <div class="module-body">
     <section class="hero" id="hero" aria-label="Hero — money zone">
       <div class="hero-col">
         <div id="heroPill" class="hero-pill" title="Right-click to copy">
@@ -209,12 +264,6 @@
       </div>
     </div>
 
-    <section aria-label="ZONE B · FLOW" id="zoneB">
-      <h2 style="margin:12px 0 8px">ZONE B · FLOW</h2>
-      <div id="fiveHourAnchor"></div>
-      <div class="card big" id="rhythmCard"></div>
-    </section>
-
     <div class="row cols-2">
       <div class="card big">
         <h2>Cost composition <span class="muted" style="font-size:11px">(input · output · cache r/w — follows bucket)</span></h2>
@@ -231,6 +280,18 @@
         </div>
       </div>
     </div>
+      </div>
+    </details>
+
+    <!-- MODULE · Flow & rhythm -->
+    <details class="module" id="modFlow">
+      <summary><span class="mod-icon">🌊</span> Flow &amp; rhythm <span class="mod-sub">5-hour anchor · rhythm · heatmap · models over time</span></summary>
+      <div class="module-body">
+    <section aria-label="ZONE B · FLOW" id="zoneB">
+      <h2 style="margin:0 0 8px">ZONE B · FLOW</h2>
+      <div id="fiveHourAnchor"></div>
+      <div class="card big" id="rhythmCard"></div>
+    </section>
 
     <div class="row cols-2">
       <div class="card big">
@@ -242,7 +303,13 @@
         <canvas id="chartModelTime"></canvas>
       </div>
     </div>
+      </div>
+    </details>
 
+    <!-- MODULE · Agents &amp; teams -->
+    <details class="module" id="modAgents">
+      <summary><span class="mod-icon">🤖</span> Agents &amp; teams <span class="mod-sub">subagent cost sunburst · runaway loops</span></summary>
+      <div class="module-body">
     <section id="zoneC" aria-label="Zone C · Agents">
       <h2 style="margin:8px 0 12px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Zone C · Agents (the team)</h2>
       <div class="row cols-2">
@@ -256,7 +323,13 @@
         </div>
       </div>
     </section>
+      </div>
+    </details>
 
+    <!-- MODULE · Tools & thinking -->
+    <details class="module" id="modTools">
+      <summary><span class="mod-icon">🛠️</span> Tools &amp; thinking <span class="mod-sub">extended-thinking cost · tool treemap · hook health · MCP</span></summary>
+      <div class="module-body">
     <section id="extThinking" aria-label="Extended-thinking cost"></section>
 
     <section id="zoneD" aria-label="Zone D · Tools">
@@ -273,9 +346,21 @@
       </div>
       <div id="mcpBreakdown" style="margin-top:16px"></div>
     </section>
+      </div>
+    </details>
 
+    <!-- MODULE · Cache -->
+    <details class="module" id="modCache">
+      <summary><span class="mod-icon">💾</span> Cache <span class="mod-sub">cache cluster · waste · amortization</span></summary>
+      <div class="module-body">
     <div id="cacheCluster"></div>
+      </div>
+    </details>
 
+    <!-- MODULE · Cost analysis & quality -->
+    <details class="module" id="modCost">
+      <summary><span class="mod-icon">📊</span> Cost analysis &amp; quality <span class="mod-sub">service tier · region · reconciliation · anomaly feed</span></summary>
+      <div class="module-body">
     <section id="zoneE" aria-label="Zone E · Cost analysis (tier · region)">
       <h2 style="margin:8px 0 12px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Zone E · Cost analysis</h2>
       <section id="serviceTier" aria-label="Service-tier breakdown"></section>
@@ -290,7 +375,13 @@
         <div id="anomalyList"></div>
       </div>
     </section>
+      </div>
+    </details>
 
+    <!-- MODULE · Projects & sessions -->
+    <details class="module" id="modProjects">
+      <summary><span class="mod-icon">📁</span> Projects &amp; sessions <span class="mod-sub">top sessions · monthly summary · per-project ROI · all projects</span></summary>
+      <div class="module-body">
     <div class="card big">
       <h2>Top 10 sessions by cost</h2>
       <canvas id="chartTopSessions"></canvas>
@@ -310,16 +401,20 @@
 
     <section id="roiCards" class="card big" aria-label="Per-project ROI"></section>
 
-    <div class="card big hidden" id="projTableCard">
-      <h2>Top projects</h2>
+    <div class="card big" id="projTableCard">
+      <h2>All projects <span class="muted" style="font-size:11px">(top 25 by spend)</span></h2>
       <table id="projTable">
         <thead><tr><th>Project</th><th class="num">Sessions</th><th class="num">Messages</th><th class="num">Tokens</th><th class="num">Cost</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
+      </div>
+    </details>
 
-    <details id="zoneF">
-      <summary>ZONE F · DEEP DIVE — Session explorer · version timeline · branch costs</summary>
+    <!-- MODULE · Deep dive (Zone F) -->
+    <details class="module" id="zoneF">
+      <summary><span class="mod-icon">🔬</span> Deep dive <span class="mod-sub">session explorer · version timeline · branch costs</span></summary>
+      <div class="module-body">
       <div id="sessionExplorer"></div>
       <div class="card big" id="versionTimelineCard" style="margin-top:12px">
         <h2>Claude Code version timeline <span class="muted" style="font-size:11px">(stacked by version · pins = release dates)</span></h2>
@@ -328,6 +423,7 @@
       <div class="card big" id="branchCostCard" style="margin-top:12px">
         <h2>Cost by git branch <span class="muted" style="font-size:11px">(rename rules editable · click a row to filter)</span></h2>
         <div id="branchCost"></div>
+      </div>
       </div>
     </details>
 
@@ -752,6 +848,7 @@ function recompute(){
   }
   try { if (window.ClaudeMeter && window.ClaudeMeter.attribution) window.ClaudeMeter.attribution.applyAll(STATE.events); } catch(e){}
   try { if (window.ClaudeMeter && window.ClaudeMeter.surveillance) window.ClaudeMeter.surveillance.autoEnableIfTeam(STATE.events); } catch(e){}
+  safe("overview",  renderOverview);
   safe("kpi",       renderKPIs);
   safe("time",      renderTimeChart);
   safe("rhythm",    renderRhythm);
@@ -1068,6 +1165,74 @@ function renderProjTable(){
         <td class="num">${fmtTok(p.tok)}</td>
         <td class="num">${fmt$(p.cost)}</td>
       </tr>`);
+  }
+}
+
+// OVERVIEW — all-time totals across every module + top-5 projects by spend.
+function renderOverview(){
+  const ev = STATE.events;
+  if (!ev || !ev.length) return;
+  let total=0,inTok=0,outTok=0,crTok=0,cwTok=0;
+  const sessSet = new Set();
+  let min=ev[0].ts, max=ev[0].ts;
+  for (const e of ev){
+    total+=e.cost; inTok+=e.inTok; outTok+=e.outTok; crTok+=e.crTok; cwTok+=e.cwTok;
+    sessSet.add(e.session);
+    if (e.ts<min) min=e.ts; if (e.ts>max) max=e.ts;
+  }
+  const tot = inTok+outTok+crTok+cwTok;
+  const msgs = ev.length;
+  const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  set("ovTotal", fmt$(total));
+  set("ovTotalSub", `${fmtTok(tot)} tokens`);
+  set("ovTokens", fmtTok(tot));
+  set("ovTokensSub", `in ${fmtTok(inTok)} · out ${fmtTok(outTok)} · cache ${fmtTok(crTok+cwTok)}`);
+  set("ovSessions", fmtInt(sessSet.size));
+  const projCount = new Set(ev.map(e=>e.attribution||e.project)).size;
+  set("ovSessionsSub", `${fmtInt(projCount)} projects`);
+  set("ovMsgs", fmtInt(msgs));
+  set("ovMsgsSub", `${fmtInt(Math.round(msgs/Math.max(1,sessSet.size)))} avg / session`);
+  set("ovRange", `${min.toLocaleDateString()} → ${max.toLocaleDateString()}`);
+
+  const plan = parseFloat(document.getElementById("plan").value)||0;
+  const now = new Date();
+  const mStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  let mCost=0; for (const e of ev){ if (e.ts>=mStart) mCost+=e.cost; }
+  const roiEl=document.getElementById("ovRoi"), roiSub=document.getElementById("ovRoiSub");
+  if (roiEl){
+    if (!plan){ roiEl.textContent="—"; if(roiSub) roiSub.textContent="no plan selected"; }
+    else { const ratio=mCost/plan; roiEl.textContent=(ratio*100).toFixed(0)+"%"; if(roiSub) roiSub.textContent=`${fmt$(mCost)} of $${plan} this mo`; }
+  }
+
+  const map = new Map();
+  for (const e of ev){
+    const key = e.attribution || e.project;
+    if (!map.has(key)) map.set(key,{cost:0,tok:0,sessions:new Set()});
+    const p=map.get(key); p.cost+=e.cost; p.tok+=e.inTok+e.outTok+e.crTok+e.cwTok; p.sessions.add(e.session);
+  }
+  const top5=[...map.entries()].sort((a,b)=>b[1].cost-a[1].cost).slice(0,5);
+  const maxCost = top5.length ? top5[0][1].cost : 1;
+  const displayName=(name)=>{
+    let n=name;
+    try { if (window.ClaudeMeter && window.ClaudeMeter.surveillance) n=window.ClaudeMeter.surveillance.anonymize(n); } catch(e){}
+    try { if (window.ClaudeMeter && window.ClaudeMeter.redact) n=window.ClaudeMeter.redact.apply(n); } catch(e){}
+    return n;
+  };
+  const host=document.getElementById("top5Projects");
+  if (host){
+    host.innerHTML="";
+    if (!top5.length){ host.innerHTML='<div class="muted" style="font-size:12px">No projects.</div>'; return; }
+    for (const [name,p] of top5){
+      const pct = maxCost ? (p.cost/maxCost*100) : 0;
+      const row=document.createElement("div"); row.className="ov-bar-row";
+      const nm=document.createElement("div"); nm.className="ov-bar-name cm-redact-target"; nm.textContent=displayName(name); nm.title=displayName(name);
+      const track=document.createElement("div"); track.className="ov-bar-track";
+      const fill=document.createElement("div"); fill.className="ov-bar-fill"; fill.style.width=pct.toFixed(1)+"%";
+      track.appendChild(fill);
+      const val=document.createElement("div"); val.className="ov-bar-val"; val.textContent=`${fmt$(p.cost)} · ${fmtTok(p.tok)}`;
+      row.appendChild(nm); row.appendChild(track); row.appendChild(val);
+      host.appendChild(row);
+    }
   }
 }
 
@@ -1423,6 +1588,22 @@ window.__cmRecompute = recompute;
       if (window.ClaudeMeter && window.ClaudeMeter.driftDiff) window.ClaudeMeter.driftDiff.open();
     });
   } catch(e){ console.warn("[init] driftDiff wiring failed:", e); }
+
+  // Wave 4 — collapsible modules: charts/treemaps/heatmaps measure their
+  // container width at render time, which is 0 while a module is collapsed
+  // (display:none). Re-run the pipeline the first time each module is opened so
+  // its visuals size correctly. rAF defers until layout has the now-visible box.
+  try {
+    document.querySelectorAll("details.module, details.card").forEach(function(m){
+      m.addEventListener("toggle", function(){
+        if (!m.open) return;
+        if (!(window.STATE && window.STATE.events && window.STATE.events.length)) return;
+        requestAnimationFrame(function(){
+          try { if (window.__cmRecompute) window.__cmRecompute(); } catch(e){}
+        });
+      });
+    });
+  } catch(e){ console.warn("[init] module toggle wiring failed:", e); }
 })();
 </script>
 </body>
