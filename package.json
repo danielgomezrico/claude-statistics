@@ -9,5 +9,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/danielgomezrico/claude-statistics"
+  },
+  "dependencies": {
+    "three": "^0.184.0"
   }
 }

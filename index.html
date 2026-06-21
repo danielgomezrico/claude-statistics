@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Claude Meter — independent auditor of your local JSONL</title>
+<link rel="icon" href="data:," />
 <link rel="stylesheet" href="src/css/base.css" />
 <link rel="stylesheet" href="src/css/theme-light.css" />
 <link rel="stylesheet" href="src/css/motion.css" />
@@ -29,9 +30,18 @@
 <link rel="stylesheet" href="src/css/drift-diff.css" />
 <link rel="stylesheet" href="src/css/export-menu.css" />
 <link rel="stylesheet" href="src/css/transparency.css" />
+<link rel="stylesheet" href="src/css/pricing-city.css" />
 <link rel="stylesheet" href="src/css/print.css" />
 <script src="src/js/theme.js"></script>
 <script src="src/vendor/chart.umd.min.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "./src/vendor/three/three.module.js",
+    "three/addons/": "./src/vendor/three/addons/"
+  }
+}
+</script>
 <style>
   :root{
     --bg:#0b0d12; --panel:#12151c; --panel2:#171b24; --border:#262b38;
@@ -280,6 +290,10 @@
         </div>
       </div>
     </div>
+
+    <section class="card big pricing-city-card" id="pricingCityCard" aria-label="Pricing city">
+      <div id="pricingCity"></div>
+    </section>
       </div>
     </details>
 
@@ -858,6 +872,7 @@ function recompute(){
   safe("cum",       renderCumulative);
   safe("heatmap",   renderHeatmap);
   safe("modelTime", renderModelOverTime);
+  safe("pricingCity",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.pricingCity) window.ClaudeMeter.pricingCity.render(STATE.events); });
   safe("cache",     renderCacheCluster);
   safe("reconcile", renderReconcile);
   safe("topSess",   renderTopSessions);
@@ -954,6 +969,7 @@ document.querySelectorAll("#bucketTabs .tab").forEach(t=>t.addEventListener("cli
   safe("time",      renderTimeChart);
   safe("stack",     renderStack);
   safe("modelTime", renderModelOverTime);
+  safe("pricingCity",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.pricingCity) window.ClaudeMeter.pricingCity.render(STATE.events); });
   safe("cache",     renderCacheCluster);
   safe("extThinking",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.extThinking) window.ClaudeMeter.extThinking.render(); });
   safe("serviceTier",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.serviceTier) window.ClaudeMeter.serviceTier.render(); });
@@ -1526,6 +1542,7 @@ window.__cmRecompute = recompute;
 <!-- Wave 3 · Stream 5 (Drift Diff + IDB cache + Web Worker) -->
 <script src="src/js/drift-diff.js"></script>
 <script src="src/js/idb-cache.js"></script>
+<script type="module" src="src/js/pricing-city.js"></script>
 
 <script>
 (function(){
@@ -1537,6 +1554,11 @@ window.__cmRecompute = recompute;
       window.ClaudeMeter.roiCards.mount(document.getElementById("roiCards"));
     }
   } catch(e){ console.warn("[init] roiCards.mount failed:", e); }
+  try {
+    if (window.ClaudeMeter && window.ClaudeMeter.pricingCity){
+      window.ClaudeMeter.pricingCity.mount(document.getElementById("pricingCity"));
+    }
+  } catch(e){ console.warn("[init] pricingCity.mount failed:", e); }
   try {
     if (window.ClaudeMeter && window.ClaudeMeter.redact){
       window.ClaudeMeter.redact.installToggle(document.getElementById("redactToggleHost"));

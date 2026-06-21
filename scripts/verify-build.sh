@@ -22,8 +22,13 @@ cd "$ROOT"
 
 FILES=(
   "index.html"
+  "src/css/pricing-city.css"
+  "src/js/pricing-city.js"
   "src/vendor/chart.umd.min.js"
   "src/vendor/chart.umd.min.js.sha256"
+  "src/vendor/three/three.module.js"
+  "src/vendor/three/three.core.js"
+  "src/vendor/three/addons/controls/OrbitControls.js"
 )
 
 # Verify every file exists.

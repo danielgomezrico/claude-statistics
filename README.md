@@ -31,6 +31,7 @@ The dashboard only reads JSONL transcripts under `projects/` (Claude Code) and `
 - **Spend over time** — bar chart with hourly / daily / weekly / monthly toggle.
 - **Cost composition** — same buckets, stacked by input · output · cache read · cache write. Reveals which token category drives cost.
 - **Cumulative spend vs subscription** — running API-equivalent total vs running subscription cost. The widening gap is captured value.
+- **Pricing city** — interactive 3D analogy: projects or models become buildings, model spend becomes floors, token categories become rooftop blocks, and the subscription road compares paid plan cost against API-equivalent token cost.
 - **Models over time** — stacked bar per bucket by model id.
 - **Cache hit ratio over time** — `cache_read / (cache_read + fresh input + cache write)`. Higher = more leverage per message.
 
@@ -74,7 +75,9 @@ Interpretation: 78× the value of the flat $100 subscription. Cache reads domina
 
 ## Files
 
-- `index.html` — the whole app, single file, no external data dependencies (one CDN import for Chart.js).
+- `index.html` — the browser dashboard shell; runtime scripts and vendor assets are local.
+- `src/js/pricing-city.js` — Three.js pricing analogy scene.
+- `src/vendor/three/` — vendored Three.js runtime modules for local, no-network use.
 - `README.md` — this file.
 - `LICENSE` — MIT.
 
