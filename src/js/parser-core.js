@@ -15,7 +15,7 @@
   }
 })(typeof window !== "undefined" ? window : (typeof globalThis !== "undefined" ? globalThis : this), function(){
   var DEFAULT_PRICING = [
-    { match:"opus",   in:15.00, out:75.00, cacheRead:1.50, cacheWrite:18.75 },
+    { match:"opus",   in: 5.00, out:25.00, cacheRead:0.50, cacheWrite: 6.25 },
     { match:"sonnet", in: 3.00, out:15.00, cacheRead:0.30, cacheWrite: 3.75 },
     { match:"haiku",  in: 1.00, out: 5.00, cacheRead:0.10, cacheWrite: 1.25 },
     { match:"",       in: 3.00, out:15.00, cacheRead:0.30, cacheWrite: 3.75 },
