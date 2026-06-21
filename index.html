@@ -55,7 +55,7 @@
   h2{margin:0 0 12px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
   .muted{color:var(--muted)}
   main{padding:20px 24px;display:grid;gap:20px}
-  .drop{border:2px dashed var(--border);border-radius:12px;padding:40px;text-align:center;background:var(--panel);transition:.2s;cursor:pointer}
+  .drop{position:relative;border:2px dashed var(--border);border-radius:12px;padding:44px 40px 36px;text-align:center;background:var(--panel);transition:.2s;cursor:pointer}
   .drop.hover{border-color:var(--accent);background:var(--panel2)}
   .drop input{display:none}
   .row{display:grid;gap:16px}
@@ -91,8 +91,16 @@
   .progress{margin-top:12px;height:8px;background:var(--panel2);border-radius:999px;overflow:hidden;border:1px solid var(--border);display:none}
   .progress.show{display:block}
   .progress .bar{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#f0a07f);transition:width .1s linear}
-  .demo-row{margin-top:16px;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--muted);font-size:12px}
-  .demo-row::before,.demo-row::after{content:"";flex:0 0 60px;height:1px;background:var(--border)}
+  .drop-title{display:block;font-size:24px;line-height:1.2;font-weight:700}
+  .drop-lead{margin:10px auto 0;max-width:920px;font-size:16px;color:var(--text)}
+  .drop-paths{margin-top:10px;color:var(--muted);font-size:13px}
+  .drop-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;max-width:900px;margin:24px auto 0;text-align:left}
+  .drop-step{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px}
+  .drop-step b{display:block;color:var(--text);font-size:12px;margin-bottom:4px}
+  .drop-step span{display:block;color:var(--muted);font-size:12px;line-height:1.4}
+  .demo-corner{position:absolute;top:14px;right:14px;display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px}
+  .demo-corner .btn{padding:5px 9px;font-size:11px;border-radius:7px}
+  @media (max-width:900px){.drop{padding:54px 18px 28px}.drop-steps{grid-template-columns:1fr}.demo-corner{top:10px;right:10px}.drop-title{font-size:21px}}
   .btn{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;transition:.15s}
   .btn:hover{border-color:var(--accent);color:var(--accent)}
   .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -168,8 +176,18 @@
 <main>
 
   <div class="drop" id="drop">
-    <strong>Drop your <code>~/.claude/</code> folder here</strong>
-    <div class="muted" style="margin-top:6px">(or <code>~/.claude/projects/</code>, or any subset) — click to browse. <code>Cmd+Shift+.</code> in Finder reveals hidden folders.</div>
+    <div class="demo-corner">
+      <span>Just browsing?</span>
+      <button type="button" class="btn" id="demoBtn">Demo data</button>
+    </div>
+    <strong class="drop-title">Import your Claude data</strong>
+    <div class="drop-lead">Drop your <code>~/.claude/</code> folder here, or click this panel to browse.</div>
+    <div class="drop-paths">Best path: <code>~/.claude/</code>. Also works with <code>~/.claude/projects/</code> or any subset.</div>
+    <div class="drop-steps" aria-label="How to import">
+      <div class="drop-step"><b>1. Open the file picker</b><span>Click this panel and go to your home folder.</span></div>
+      <div class="drop-step"><b>2. Show hidden folders on Mac</b><span>Press <code>Cmd + Shift + .</code> in Finder.</span></div>
+      <div class="drop-step"><b>3. Select <code>.claude</code></b><span>Your JSONL is parsed locally; nothing is uploaded.</span></div>
+    </div>
     <input type="file" id="files" multiple webkitdirectory directory />
     <div id="status" class="muted" style="margin-top:10px;font-size:12px"></div>
     <div class="progress" id="progress"><div class="bar" id="progressBar"></div></div>
@@ -178,9 +196,6 @@
       <code>~/Library/Application&nbsp;Support/Claude/local-agent-mode-sessions/</code> (macOS) or<br>
       <code>%APPDATA%\Claude\local-agent-mode-sessions\</code> (Windows) — drop the whole <code>Claude/</code> folder to include both.
     </div>
-    <div class="demo-row">or</div>
-    <button type="button" class="btn primary" id="demoBtn">See demo with sample data</button>
-    <div class="muted" style="margin-top:8px;font-size:11px">Explore the dashboard with synthetic usage — no files needed.</div>
   </div>
 
   <div id="dash" class="hidden">
