@@ -16,6 +16,7 @@
     { "id": "claude-opus-4-7",        "effective": "2026-01-15", "model": "claude-opus-4-7",            "match": "claude-opus-4-7",           "input": 5.00,  "output": 25.00, "cacheRead": 0.50, "cacheWrite": 6.25 },
     { "id": "claude-sonnet-4-5",      "effective": "2025-10-12", "model": "claude-sonnet-4-5",          "match": "claude-sonnet-4-5",         "input": 3.00,  "output": 15.00, "cacheRead": 0.30, "cacheWrite": 3.75 },
     { "id": "claude-haiku-4-5",       "effective": "2025-11-08", "model": "claude-haiku-4-5",           "match": "claude-haiku-4-5",          "input": 1.00,  "output": 5.00,  "cacheRead": 0.10, "cacheWrite": 1.25 },
+    { "id": "claude-fable-5",         "effective": "2026-06-21", "model": "claude-fable-5",             "match": "claude-fable-5",            "input": 3.00,  "output": 15.00, "cacheRead": 0.30, "cacheWrite": 3.75 },
     { "id": "claude-default-fallback","effective": "1970-01-01", "model": "(fallback)",                 "match": "",                          "input": 3.00,  "output": 15.00, "cacheRead": 0.30, "cacheWrite": 3.75 }
   ]
 }

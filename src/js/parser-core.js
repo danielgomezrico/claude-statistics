@@ -17,6 +17,7 @@
   var DEFAULT_PRICING = [
     { match:"opus",   in: 5.00, out:25.00, cacheRead:0.50, cacheWrite: 6.25 },
     { match:"sonnet", in: 3.00, out:15.00, cacheRead:0.30, cacheWrite: 3.75 },
+    { match:"fable",  in: 3.00, out:15.00, cacheRead:0.30, cacheWrite: 3.75 },
     { match:"haiku",  in: 1.00, out: 5.00, cacheRead:0.10, cacheWrite: 1.25 },
     { match:"",       in: 3.00, out:15.00, cacheRead:0.30, cacheWrite: 3.75 },
   ];
@@ -46,9 +47,24 @@
     var outTok = usage.output_tokens || 0;
     var crTok = usage.cache_read_input_tokens || 0;
     var cwTok = usage.cache_creation_input_tokens || 0;
+    var thinkTok = usage.thinking_tokens || usage.thinking_input_tokens || 0;
+    var serviceTier = usage.service_tier || msg.service_tier || obj.service_tier || "unknown";
+    var region = obj.inference_geo || msg.inference_geo || usage.inference_geo || (obj.metadata && obj.metadata.inference_geo) || null;
     if (!(inTok || outTok || crTok || cwTok)) return null;
     var p = priceFor(pricing, model);
     var cost = (inTok*p.in + outTok*p.out + crTok*p.cacheRead + cwTok*p.cacheWrite) / 1e6;
+    var toolCalls = null;
+    var content = msg && msg.content;
+    if (Array.isArray(content)){
+      toolCalls = {};
+      for (var i=0;i<content.length;i++){
+        var c = content[i];
+        if (c && c.type === "tool_use" && c.name){
+          toolCalls[c.name] = (toolCalls[c.name] || 0) + 1;
+        }
+      }
+    }
+    var stopReason = msg && (msg.stop_reason || msg.stopReason);
     return {
       ts: new Date(ts).toISOString(),
       tsMs: +new Date(ts),
@@ -60,6 +76,21 @@
       cost: cost,
       session: obj.sessionId || obj.session_id || "—",
       project: projectName || "unknown",
+      cwd: obj.cwd || msg.cwd || "",
+      gitBranch: obj.gitBranch || msg.gitBranch || "",
+      version: obj.version || msg.version || obj.claudeCodeVersion || obj.cliVersion || null,
+      requestId: obj.requestId || msg.requestId || obj.request_id || msg.request_id || null,
+      uuid: obj.uuid || null,
+      parentUuid: obj.parentUuid || obj.logicalParentUuid || null,
+      isSidechain: !!obj.isSidechain,
+      teamName: obj.teamName || null,
+      agentName: obj.agentName || null,
+      agentId: obj.agentId || null,
+      stopReason: stopReason || null,
+      toolCalls: toolCalls,
+      thinkTok: thinkTok,
+      serviceTier: serviceTier,
+      region: region,
     };
   }
 
