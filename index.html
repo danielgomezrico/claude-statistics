@@ -31,6 +31,10 @@
 <link rel="stylesheet" href="src/css/export-menu.css" />
 <link rel="stylesheet" href="src/css/transparency.css" />
 <link rel="stylesheet" href="src/css/pricing-city.css" />
+<link rel="stylesheet" href="src/css/three-constellation.css" />
+<link rel="stylesheet" href="src/css/three-helix.css" />
+<link rel="stylesheet" href="src/css/three-flow.css" />
+<link rel="stylesheet" href="src/css/three-universe.css" />
 <link rel="stylesheet" href="src/css/print.css" />
 <script src="src/js/theme.js"></script>
 <script src="src/vendor/chart.umd.min.js"></script>
@@ -309,6 +313,20 @@
     <section class="card big pricing-city-card" id="pricingCityCard" aria-label="Pricing city">
       <div id="pricingCity"></div>
     </section>
+
+    <!-- 3D cosmic diagrams: make amazing per steer-team + universe-stars-improvements.md -->
+    <div class="row cols-3">
+      <section class="card big constellation-card" id="constellationCard" aria-label="3D Session Constellation">
+        <div id="threeConstellation"></div>
+      </section>
+      <section class="card big helix-card" id="threeHelixCard" aria-label="3D Activity Helix">
+        <div id="threeHelix"></div>
+      </section>
+      <section class="card big tflow-card" id="threeFlowCard" aria-label="3D Cache Flow">
+        <div id="threeFlow"></div>
+      </section>
+    </div>
+
       </div>
     </details>
 
@@ -1558,6 +1576,11 @@ window.__cmRecompute = recompute;
 <script src="src/js/alert-2x.js"></script>
 <script src="src/js/density-mode.js"></script>
 <script src="src/js/mobile.js"></script>
+<!-- 3D cosmic diagrams (constellation / helix / flow / universe) -->
+<script type="module" src="src/js/three-constellation.js"></script>
+<script type="module" src="src/js/three-helix.js"></script>
+<script type="module" src="src/js/three-flow.js"></script>
+<script type="module" src="src/js/three-universe.js"></script>
 <script src="src/js/cfo-pdf.js"></script>
 <!-- Wave 3 · Stream 5 (Drift Diff + IDB cache + Web Worker) -->
 <script src="src/js/drift-diff.js"></script>
@@ -1579,6 +1602,10 @@ window.__cmRecompute = recompute;
       window.ClaudeMeter.pricingCity.mount(document.getElementById("pricingCity"));
     }
   } catch(e){ console.warn("[init] pricingCity.mount failed:", e); }
+  try { if (window.ClaudeMeter && window.ClaudeMeter.fullscreen) window.ClaudeMeter.fullscreen.enhance(document.getElementById("threeConstellation")); } catch(e){}
+  try { if (window.ClaudeMeter && window.ClaudeMeter.fullscreen) window.ClaudeMeter.fullscreen.enhance(document.getElementById("threeHelixCard")); } catch(e){}
+  try { if (window.ClaudeMeter && window.ClaudeMeter.fullscreen) window.ClaudeMeter.fullscreen.enhance(document.getElementById("threeFlowCard")); } catch(e){}
+  try { if (window.ClaudeMeter && window.ClaudeMeter.fullscreen) window.ClaudeMeter.fullscreen.enhance(document.getElementById("universeCard")); } catch(e){}
   try {
     if (window.ClaudeMeter && window.ClaudeMeter.redact){
       window.ClaudeMeter.redact.installToggle(document.getElementById("redactToggleHost"));

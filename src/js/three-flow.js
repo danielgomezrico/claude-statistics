@@ -164,10 +164,10 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     controls.addEventListener('change', onControlChange);
     host.addEventListener('dblclick', ()=>{ if(camera&&controls){camera.position.set(14,3.5,11);controls.target.set(0,0,0);controls.update();} });
 
-    scene.add(new THREE.HemisphereLight(0xe8ecff, 0x1f2937, 1.8));
-    const sun = new THREE.DirectionalLight(0xffffff, 2.4);
-    sun.position.set(6, 14, 8);
-    scene.add(sun);
+    // point star lights (vacuum cosmic, per universe tips + shared P0)
+    const p1 = new THREE.PointLight(0xcbd5e1, 0.9, 130); p1.position.set(12,22,-9); scene.add(p1);
+    const p2 = new THREE.PointLight(0xa5b4fc, 0.65, 95); p2.position.set(-14,8,18); scene.add(p2);
+    const p3 = new THREE.PointLight(0xfca5a5, 0.5, 80); p3.position.set(4,-7,-16); scene.add(p3);
 
     flowGroup = new THREE.Group();
     scene.add(flowGroup);
