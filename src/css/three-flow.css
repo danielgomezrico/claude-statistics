@@ -1,0 +1,23 @@
+.tflow-card{overflow:hidden}
+.tflow{display:grid;gap:12px}
+.tflow-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.tflow-title h2{margin:0 0 4px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.tflow-title p{margin:0;color:var(--muted);font-size:12px;max-width:760px}
+.tflow-stage{position:relative;min-height:420px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#000}
+.tflow-stage canvas{display:block;width:100%;height:100%;touch-action:none}
+.tflow-inspector{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tflow-panel{border:1px solid var(--border);border-radius:10px;background:var(--panel2);padding:12px;min-width:0}
+.tflow-panel h3{margin:0 0 6px;font-size:12px;font-weight:600;color:var(--text)}
+.tflow-panel p{margin:0;color:var(--muted);font-size:12px;line-height:1.35}
+.tflow-legend{display:flex;gap:6px;flex-wrap:wrap}
+.tflow-chip{display:inline-flex;align-items:center;gap:4px;background:#0b0d12cc;border:1px solid #ffffff1f;border-radius:999px;padding:3px 6px;color:var(--muted);font-size:11px}
+.tflow-swatch{width:8px;height:8px;border-radius:2px}
+.tflow-list{display:grid;gap:4px;margin-top:6px;font-size:11px}
+.tflow-row{display:flex;gap:6px;align-items:center;justify-content:space-between}
+.tflow-empty{min-height:200px;display:grid;place-items:center;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:10px;font-size:12px;background:#000}
+@media (prefers-reduced-motion:reduce){.tflow-stage canvas{animation:none}}
+@media (max-width:900px){
+  .tflow-stage{min-height:340px}
+  .tflow-inspector{grid-template-columns:1fr}
+}
+.card.fullscreen .tflow-stage{background:#000!important}

@@ -38,9 +38,11 @@
     if (!now) now = Date.now();
     const threshold14 = now - 14*DAY_MS;
     const thresholdSpark = now - 30*DAY_MS;
+    const isInt = (window.ClaudeMeter && window.ClaudeMeter.parserCore && window.ClaudeMeter.parserCore.isInternalAgentProject) || (p => ["subagents",".worktree",".agents"].indexOf(p)>=0);
 
     for (const e of events){
       const k = projectOf(e);
+      if (isInt(k)) continue;
       if (!byProj.has(k)) byProj.set(k, {
         name: k, cost: 0, msgs: 0, sessions: new Set(),
         inTok: 0, crTok: 0, cwTok: 0, outTok: 0,

@@ -1171,8 +1171,10 @@ function renderMonthTable(){
 
 function renderProjTable(){
   const map = new Map();
+  const isInt = (window.ClaudeMeter && window.ClaudeMeter.parserCore && window.ClaudeMeter.parserCore.isInternalAgentProject) || (p => ["subagents",".worktree",".agents"].indexOf(p)>=0);
   for (const e of STATE.events){
     const key = e.attribution || e.project;
+    if (isInt(key)) continue;
     if (!map.has(key)) map.set(key,{sessions:new Set(),msgs:0,tok:0,cost:0});
     const p = map.get(key);
     p.sessions.add(e.session);
@@ -1220,7 +1222,8 @@ function renderOverview(){
   set("ovTokens", fmtTok(tot));
   set("ovTokensSub", `in ${fmtTok(inTok)} · out ${fmtTok(outTok)} · cache ${fmtTok(crTok+cwTok)}`);
   set("ovSessions", fmtInt(sessSet.size));
-  const projCount = new Set(ev.map(e=>e.attribution||e.project)).size;
+  const isInt = (window.ClaudeMeter && window.ClaudeMeter.parserCore && window.ClaudeMeter.parserCore.isInternalAgentProject) || (p => ["subagents",".worktree",".agents"].indexOf(p)>=0);
+  const projCount = new Set(ev.map(e=>e.attribution||e.project).filter(n => !isInt(n))).size;
   set("ovSessionsSub", `${fmtInt(projCount)} projects`);
   set("ovMsgs", fmtInt(msgs));
   set("ovMsgsSub", `${fmtInt(Math.round(msgs/Math.max(1,sessSet.size)))} avg / session`);
@@ -1237,8 +1240,10 @@ function renderOverview(){
   }
 
   const map = new Map();
+  const isInt = (window.ClaudeMeter && window.ClaudeMeter.parserCore && window.ClaudeMeter.parserCore.isInternalAgentProject) || (p => ["subagents",".worktree",".agents"].indexOf(p)>=0);
   for (const e of ev){
     const key = e.attribution || e.project;
+    if (isInt(key)) continue;
     if (!map.has(key)) map.set(key,{cost:0,tok:0,sessions:new Set()});
     const p=map.get(key); p.cost+=e.cost; p.tok+=e.inTok+e.outTok+e.crTok+e.cwTok; p.sessions.add(e.session);
   }

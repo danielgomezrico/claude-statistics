@@ -87,9 +87,11 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     const tokenTotals = { input:0, output:0, cacheRead:0, cacheWrite:0 };
     let total = 0;
     let msgs = 0;
+    const isInt = (window.ClaudeMeter && window.ClaudeMeter.parserCore && window.ClaudeMeter.parserCore.isInternalAgentProject) || (p => ["subagents",".worktree",".agents"].indexOf(p)>=0);
 
     for (const e of events){
       const key = viewMode === "models" ? (e.model || "unknown") : (e.attribution || e.project || "unknown");
+      if (isInt(key)) continue;
       if (!rows.has(key)) rows.set(key, {
         key, label: key, cost:0, msgs:0, sessions:new Set(), tokens:0,
         parts:{ input:0, output:0, cacheRead:0, cacheWrite:0 },

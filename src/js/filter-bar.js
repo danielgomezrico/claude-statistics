@@ -91,7 +91,12 @@
   function uniqueOptions(field) {
     var set = new Set();
     var evs = getEvents();
-    for (var i = 0; i < evs.length; i++) set.add(evs[i][field]);
+    var isInt = (window.ClaudeMeter && window.ClaudeMeter.parserCore && window.ClaudeMeter.parserCore.isInternalAgentProject) || (function(p){ return ["subagents",".worktree",".agents"].indexOf(p)>=0; });
+    for (var i = 0; i < evs.length; i++) {
+      var v = evs[i][field];
+      if (field === "project" && isInt(v)) continue;
+      set.add(v);
+    }
     return Array.from(set).filter(Boolean).sort();
   }
 

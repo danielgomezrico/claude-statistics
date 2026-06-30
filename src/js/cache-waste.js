@@ -75,9 +75,11 @@
 
   function aggregateByProject(records){
     var m = new Map();
+    var isInt = (window.ClaudeMeter && window.ClaudeMeter.parserCore && window.ClaudeMeter.parserCore.isInternalAgentProject) || (p => ["subagents",".worktree",".agents"].indexOf(p)>=0);
     for (var i=0;i<records.length;i++){
       var r = records[i];
       var key = r.project;
+      if (isInt(key)) continue;
       if (!m.has(key)) m.set(key, { project:key, sessions:new Set(), cwTok:0, cost:0, blocks:0 });
       var row = m.get(key);
       row.sessions.add(r.session);

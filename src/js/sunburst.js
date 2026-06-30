@@ -18,11 +18,13 @@
   function fmtTok(n){ if(n>=1e9)return(n/1e9).toFixed(2)+"B"; if(n>=1e6)return(n/1e6).toFixed(2)+"M"; if(n>=1e3)return(n/1e3).toFixed(1)+"k"; return String(n||0); }
 
   function eventTeam(ev){
-    if (!ev.isSidechain) return "main";
+    var intP = !!(window.ClaudeMeter && window.ClaudeMeter.parserCore && window.ClaudeMeter.parserCore.isInternalAgentProject);
+    if (!ev.isSidechain && !(intP ? window.ClaudeMeter.parserCore.isInternalAgentProject(ev.project) : ["subagents",".worktree",".agents"].indexOf(ev.project)>=0 )) return "main";
     return ev.teamName || "unattributed subagents";
   }
   function eventAgent(ev){
-    if (!ev.isSidechain) return "main";
+    var intP = !!(window.ClaudeMeter && window.ClaudeMeter.parserCore && window.ClaudeMeter.parserCore.isInternalAgentProject);
+    if (!ev.isSidechain && !(intP ? window.ClaudeMeter.parserCore.isInternalAgentProject(ev.project) : ["subagents",".worktree",".agents"].indexOf(ev.project)>=0 )) return "main";
     return ev.agentName || ev.agentId || "unattributed";
   }
 

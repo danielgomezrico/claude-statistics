@@ -79,6 +79,7 @@
   function buildMarkdown(ev){
     var totalCost = 0, msgs = ev.length;
     var byMonth = new Map(), byProj = new Map(), byModel = new Map();
+    var isInt = (window.ClaudeMeter && window.ClaudeMeter.parserCore && window.ClaudeMeter.parserCore.isInternalAgentProject) || (p => ["subagents",".worktree",".agents"].indexOf(p)>=0);
     for (var i=0;i<ev.length;i++){
       var e = ev[i];
       var c = e.cost||0;
@@ -87,6 +88,7 @@
       var mk = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
       byMonth.set(mk, (byMonth.get(mk)||0)+c);
       var pk = safeName(e.project);
+      if (isInt(pk)) continue;
       byProj.set(pk, (byProj.get(pk)||0)+c);
       byModel.set(e.model, (byModel.get(e.model)||0)+c);
     }

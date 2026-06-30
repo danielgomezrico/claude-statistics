@@ -43,12 +43,14 @@
     var totals = { cost:0, msgs: inMonth.length, inTok:0, outTok:0, crTok:0, cwTok:0 };
     var byProject = new Map();
     var byEngineer = new Map();
+    var isInt = (window.ClaudeMeter && window.ClaudeMeter.parserCore && window.ClaudeMeter.parserCore.isInternalAgentProject) || (p => ["subagents",".worktree",".agents"].indexOf(p)>=0);
     for (var i=0;i<inMonth.length;i++){
       var e = inMonth[i];
       totals.cost += e.cost||0;
       totals.inTok += e.inTok||0; totals.outTok += e.outTok||0;
       totals.crTok += e.crTok||0; totals.cwTok += e.cwTok||0;
       var pk = e.project || "(unknown)";
+      if (isInt(pk)) continue;
       if (!byProject.has(pk)) byProject.set(pk, { project: pk, cost:0, msgs:0, sessions: new Set() });
       var pa = byProject.get(pk);
       pa.cost += e.cost||0; pa.msgs++; pa.sessions.add(e.session);

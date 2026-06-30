@@ -22,6 +22,13 @@
     { match:"",       in: 3.00, out:15.00, cacheRead:0.30, cacheWrite: 3.75 },
   ];
 
+  // Internal Claude agent/subagent/worktree project folder names (derived via
+  // the dir containing *.jsonl under ~/.claude/projects). These are *not* user
+  // projects; their events still contribute to totals + appear in Agents sunburst
+  // via isSidechain. Exclude them from all "project reports" (top-N, ROI, city,
+  // tables, counts, filters).
+  var INTERNAL_AGENT_PROJECTS = ["subagents", ".worktree", ".agents", "worktree", "agents"];
+
   function priceFor(pricing, model){
     var m = (model||"").toLowerCase();
     for (var i=0;i<pricing.length;i++){
@@ -177,8 +184,15 @@
     };
   }
 
+  function isInternalAgentProject(p){
+    if (!p) return false;
+    return INTERNAL_AGENT_PROJECTS.indexOf(String(p)) >= 0;
+  }
+
   return {
     DEFAULT_PRICING: DEFAULT_PRICING,
+    INTERNAL_AGENT_PROJECTS: INTERNAL_AGENT_PROJECTS,
+    isInternalAgentProject: isInternalAgentProject,
     priceFor: priceFor,
     extractEvent: extractEvent,
     parseJsonlText: parseJsonlText,
