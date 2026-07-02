@@ -3,8 +3,10 @@
 .tflow-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
 .tflow-title h2{margin:0 0 4px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 .tflow-title p{margin:0;color:var(--muted);font-size:12px;max-width:760px}
-.tflow-stage{position:relative;min-height:420px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#000}
-.tflow-stage canvas{display:block;width:100%;height:100%;touch-action:none}
+.tflow-stage{position:relative;min-height:500px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#000}
+.tflow-stage canvas{display:block;width:100%;height:100%;max-height:none;touch-action:none;cursor:grab;animation:tflow-fade-in .7s ease both}
+.tflow-stage canvas:active{cursor:grabbing}
+@keyframes tflow-fade-in{from{opacity:0}to{opacity:1}}
 .tflow-inspector{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .tflow-panel{border:1px solid var(--border);border-radius:10px;background:var(--panel2);padding:12px;min-width:0}
 .tflow-panel h3{margin:0 0 6px;font-size:12px;font-weight:600;color:var(--text)}
@@ -17,7 +19,7 @@
 .tflow-empty{min-height:200px;display:grid;place-items:center;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:10px;font-size:12px;background:#000}
 @media (prefers-reduced-motion:reduce){.tflow-stage canvas{animation:none}}
 @media (max-width:900px){
-  .tflow-stage{min-height:340px}
+  .tflow-stage{min-height:360px}
   .tflow-inspector{grid-template-columns:1fr}
 }
 .card.fullscreen .tflow-stage{background:#000!important}

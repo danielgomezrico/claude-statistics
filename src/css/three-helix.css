@@ -4,12 +4,15 @@
 .helix-title h2{margin:0 0 4px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 .helix-title p{margin:0;color:var(--muted);font-size:12px;max-width:820px}
 .helix-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.helix-stage{position:relative;min-height:420px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#000}
-.helix-stage canvas{display:block;width:100%;height:100%;touch-action:none}
+.helix-stage{position:relative;min-height:500px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#000}
+.helix-stage canvas{display:block;width:100%;height:100%;max-height:none;touch-action:none;cursor:grab}
+.helix-stage canvas:active{cursor:grabbing}
+/* depth vignette over the canvas — deepens edges so emissive coil/tips pop; never intercepts orbit input */
+.helix-stage::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:10px;background:radial-gradient(125% 100% at 50% 42%,transparent 56%,#00000088 100%);box-shadow:inset 0 0 120px 22px #0000009c;z-index:1}
 .helix-empty{min-height:220px;display:grid;place-items:center;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:10px;background:#000}
 @media (prefers-reduced-motion:reduce){.helix-stage canvas{animation:none}}
 .helix-legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
 .helix-chip{display:inline-flex;align-items:center;gap:5px;background:#0b0d12cc;border:1px solid #ffffff1f;border-radius:999px;padding:4px 7px;color:var(--muted);font-size:11px}
 .helix-swatch{width:9px;height:9px;border-radius:2px}
-@media (max-width:900px){.helix-stage{min-height:340px} .helix-stage{ touch-action:none } }
+@media (max-width:900px){.helix-stage{min-height:360px;touch-action:none}}
 .card.fullscreen .helix-stage{background:#000!important}

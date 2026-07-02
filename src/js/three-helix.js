@@ -29,6 +29,22 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
   let selectedBucket = null;
   let lastSig = '';
   let reducedMotion = false;
+  let lastFrameW = 0, lastFrameH = 0;
+  let clock = new THREE.Clock();
+  // Camera entrance ease: glides from a pulled-back offset to the framed pose.
+  let camAnim = { active:false, start:0, dur:1000, from:new THREE.Vector3(), to:new THREE.Vector3(), tgt:new THREE.Vector3() };
+  // World-space point the idle spin rotates about (the content's mass center,
+  // ~z=L/2) — captured fresh in buildHelix() so the coil never orbits off-center.
+  let helixIdleCenter = new THREE.Vector3(0, 0, 14);
+  const AXIS_Y = new THREE.Vector3(0, 1, 0);
+  // Hover/selection ease state (radial x/z only — never touches spoke scale.y).
+  let hoverObj = null, hoverEase = 1;
+  let pulses = [];
+  let coreFlowMat = null; // time-driven additive shader running along the coil axis
+
+  // Easing tiers — easeOutCubic for the deliberate draw-in, smooth half-sine
+  // for the hover/selection swell-and-settle pulse.
+  function easeOutCubic(x){ x = x<0?0:(x>1?1:x); return 1 - Math.pow(1 - x, 3); }
 
   function fmt$(n){ return "$"+(n||0).toLocaleString(undefined,{maximumFractionDigits:2,minimumFractionDigits:2}); }
   function fmtInt(n){ return (n||0).toLocaleString(); }
@@ -116,10 +132,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
     root.querySelector("[data-helix-reset]").addEventListener("click", function(){
       if (!camera || !controls) return;
-      const L = 28;
-      camera.position.set(16, 7, L * 0.7);
-      controls.target.set(0, 0, L * 0.55);
-      controls.update();
+      frameContent();
     });
     const rp = root.querySelector("[data-helix-replay]");
     if (rp) rp.addEventListener("click", triggerUnwind);
@@ -156,7 +169,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
     renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false, preserveDrawingBuffer:true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.setSize(host.clientWidth, host.clientHeight);
+    renderer.setSize(host.clientWidth, host.clientHeight, false);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     host.innerHTML = "";
     host.appendChild(renderer.domElement);
@@ -167,16 +180,20 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     controls.enableDamping = true;
     controls.dampingFactor = 0.09;
     controls.minDistance = 5;
-    controls.maxDistance = 48;
+    controls.maxDistance = 220;
     controls.maxPolarAngle = Math.PI * 0.82;
     controls.minPolarAngle = Math.PI * 0.12;
     controls.target.set(0, 0, L * 0.52);
-    controls.addEventListener('change', onControlChange);
-    host.addEventListener('dblclick',()=>{if(!camera||!controls)return; camera.position.set(16,7,19);controls.target.set(0,0,19);controls.update();});
+    host.addEventListener('dblclick',()=>{ frameContent(); });
 
-    scene.add(new THREE.HemisphereLight(0x10131a, 0x000000, 0.6));
-    const pl = new THREE.PointLight(0xa5b4fc, 1.1, 90); pl.position.set(12,14,-6); scene.add(pl);
-    const pl2 = new THREE.PointLight(0xfca5a5, 0.7, 70); pl2.position.set(-14,8,22); scene.add(pl2);
+    // Balanced ambient + cool key (reads the coil's 3D form) + warm rim
+    // (separates the silhouette from the black background). Point accents stay
+    // for local color pops near the spine.
+    scene.add(new THREE.HemisphereLight(0x1a2233, 0x05070b, 0.7));
+    const key = new THREE.DirectionalLight(0xdbe4ff, 0.85); key.position.set(-9, 16, 13); scene.add(key);
+    const rim = new THREE.DirectionalLight(0xff9e6d, 0.5); rim.position.set(11, -7, -17); scene.add(rim);
+    const pl = new THREE.PointLight(0xa5b4fc, 1.0, 90); pl.position.set(12,14,-6); scene.add(pl);
+    const pl2 = new THREE.PointLight(0xfca5a5, 0.6, 70); pl2.position.set(-14,8,22); scene.add(pl2);
 
     helixGroup = new THREE.Group();
     scene.add(helixGroup);
@@ -185,7 +202,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
     host.addEventListener("pointermove", onPointerMove);
     host.addEventListener("pointerdown", onPointerDown);
-    host.addEventListener("pointerleave", ()=>{ if(tooltip) tooltip.style.display="none"; });
+    host.addEventListener("pointerleave", ()=>{ if(tooltip) tooltip.style.display="none"; setHover(null); if(renderer) renderer.domElement.style.cursor=""; });
     controls.addEventListener('change', onControlChange);
     animate();
   }
@@ -217,6 +234,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
   function clearScene(){
     spokes.forEach(s=>{ if(s.spoke) disposeObject(s.spoke); if(s.tip) disposeObject(s.tip); if(s.glow) disposeObject(s.glow); });
     spokes = [];
+    coreFlowMat = null; // disposed below as a helixGroup child
     if (!helixGroup) return;
     while (helixGroup.children.length){
       const ch = helixGroup.children.pop();
@@ -232,17 +250,37 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     const radius = 5.8;
     const L = 28;
 
+    // Content spans local z:[0,L] centered on the coil axis — capture that
+    // center in WORLD space (against helixGroup's current transform) so the
+    // idle spin below can rotate about the content's mass, not the group origin.
+    helixGroup.updateMatrixWorld(true);
+    helixIdleCenter.set(0, 0, L / 2);
+    helixGroup.localToWorld(helixIdleCenter);
+
     const t0 = buckets[0].start;
     const tLast = buckets[n-1].end || (buckets[n-1].start + 3600000);
     const span = Math.max(1, tLast - t0);
 
     const core = new THREE.Mesh(
       new THREE.CylinderGeometry(0.07, 0.07, L, 6),
-      new THREE.MeshStandardMaterial({ color:0x334155, roughness:0.75, metalness:0.05 })
+      new THREE.MeshStandardMaterial({ color:0x334155, roughness:0.7, metalness:0.05, emissive:0x1b2740, emissiveIntensity:0.6 })
     );
     core.rotation.x = Math.PI / 2;
     core.position.z = L / 2;
     helixGroup.add(core);
+
+    // Cheap single-mesh energy shader: additive bands flow along the time axis
+    // (uv.y runs the cylinder length, mapped to Z). u_time advances in animate.
+    coreFlowMat = new THREE.ShaderMaterial({
+      transparent:true, depthWrite:false, blending:THREE.AdditiveBlending, side:THREE.DoubleSide,
+      uniforms:{ u_time:{ value:0 }, u_color:{ value:new THREE.Color(0x8ea2ff) } },
+      vertexShader:'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+      fragmentShader:'varying vec2 vUv; uniform float u_time; uniform vec3 u_color; void main(){ float flow=0.5+0.5*sin(vUv.y*26.0 - u_time*2.6); flow=pow(flow,3.0); gl_FragColor=vec4(u_color*(0.5+flow), flow*0.45); }'
+    });
+    const coreFlow = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, L, 12, 1, true), coreFlowMat);
+    coreFlow.rotation.x = Math.PI / 2;
+    coreFlow.position.z = L / 2;
+    helixGroup.add(coreFlow);
 
     const maxC = Math.max(1, ...buckets.map(b=>b.cost));
     const maxM = Math.max(1, ...buckets.map(b=>b.msgs||1));
@@ -269,10 +307,14 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
       const r0 = 0.07 + t * 0.18;
       const r1 = 0.05 + t * 0.13;
 
-      let spokeMat = new THREE.MeshStandardMaterial({ color: col, roughness:0.55, metalness:0.08 });
+      let spokeMat = new THREE.MeshStandardMaterial({ color: col, roughness:0.5, metalness:0.12 });
       if (b.cost > avgC * 1.7) { col = 0xf59e0b; spokeMat.color.setHex(col); }
+      // subtle self-emissive of the spoke's own legend hue so the coil glows
+      // and its 3D form reads against the black field (semantics preserved).
+      spokeMat.emissive = new THREE.Color(spokeMat.color.getHex());
+      spokeMat.emissiveIntensity = 0.16;
       if (b.parts && b.parts.cacheWrite > b.cost * 0.35) {
-        spokeMat.emissive = new THREE.Color(0x854d0e); spokeMat.emissiveIntensity = 0.35;
+        spokeMat.emissive = new THREE.Color(0x854d0e); spokeMat.emissiveIntensity = 0.4;
       }
 
       const spoke = new THREE.Mesh( new THREE.CylinderGeometry(r0, r1, spLen, 5), spokeMat );
@@ -283,7 +325,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
       spoke.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), qdir);
       spoke.userData = { b, dom };
 
-      const tip = new THREE.Mesh( new THREE.SphereGeometry(0.12 + t*0.06, 5, 5), new THREE.MeshStandardMaterial({ color: col, roughness:0.35, metalness:0.15 }) );
+      const tip = new THREE.Mesh( new THREE.SphereGeometry(0.12 + t*0.06, 8, 8), new THREE.MeshStandardMaterial({ color: col, roughness:0.3, metalness:0.12, emissive:new THREE.Color(col), emissiveIntensity:0.55 }) );
       tip.position.set(hx + dirX * spLen, hy + dirY * spLen, hz);
       tip.userData = { b, dom };
 
@@ -306,6 +348,46 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     const endMark = new THREE.Mesh(new THREE.SphereGeometry(0.18,6,6), new THREE.MeshStandardMaterial({color:0x9ca3af}));
     endMark.position.set(pts[n-1].x, pts[n-1].y, pts[n-1].z);
     helixGroup.add(endMark);
+
+    frameContent();
+  }
+
+  // Fit the camera so the whole helix is centered and framed for the current
+  // aspect/fov. Computes the helix content bounding sphere (AFTER objects are
+  // added) and places the orbit target at its center, then backs the camera off
+  // along a fixed viewing direction by the distance needed to fit the sphere.
+  function frameContent(){
+    if (!camera || !controls || !helixGroup || !helixGroup.children.length) return;
+    const box = new THREE.Box3().setFromObject(helixGroup);
+    if (box.isEmpty()) return;
+    const sphere = box.getBoundingSphere(new THREE.Sphere());
+    const center = sphere.center;
+    const radius = Math.max(sphere.radius, 1);
+
+    const fov = camera.fov * Math.PI / 180;
+    const aspect = camera.aspect || 1;
+    const fitH = radius / Math.sin(fov / 2);
+    const hFov = 2 * Math.atan(Math.tan(fov / 2) * aspect);
+    const fitW = radius / Math.sin(hFov / 2);
+    let dist = 1.12 * Math.max(fitH, fitW);
+    dist = Math.max(controls.minDistance + radius, dist);
+
+    // keep zoom-out room so the auto-frame distance is never clamped away
+    controls.maxDistance = Math.max(220, dist * 1.3);
+
+    const dir = new THREE.Vector3(0.58, 0.4, 0.72).normalize();
+    controls.target.copy(center);
+    camera.position.copy(center).addScaledVector(dir, dist);
+
+    camera.near = Math.max(0.1, dist - radius * 2);
+    camera.far = dist + radius * 3 + 160;
+    camera.updateProjectionMatrix();
+
+    if (scene && scene.fog){
+      scene.fog.near = Math.max(1, dist - radius * 1.2);
+      scene.fog.far = dist + radius * 2.4;
+    }
+    controls.update();
   }
 
   function addBurnParticles(hx,hy,hz,dx,dy,len){
@@ -337,6 +419,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     raycaster.setFromCamera(pointer, camera);
     const hits = raycaster.intersectObjects(helixGroup.children, true);
     const hit = hits.find(h => h.object && h.object.userData && h.object.userData.b);
+    setHover(hit ? hit.object : null);
+    renderer.domElement.style.cursor = hit ? "pointer" : ""; // CSS supplies grab/grabbing otherwise
     if (hit){
       const b = hit.object.userData.b;
       const dom = hit.object.userData.dom;
@@ -368,6 +452,12 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     camera.aspect = w/h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);
+    // Re-frame only when the stage actually resized (e.g. layout / fullscreen),
+    // so live data refreshes don't fight a user's current orbit.
+    if (w !== lastFrameW || h !== lastFrameH){
+      lastFrameW = w; lastFrameH = h;
+      frameContent();
+    }
   }
 
   function makeStarLayers(){
@@ -401,9 +491,42 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     starLayers[0].rotation.y = -camera.position.x*f*0.6; starLayers[2].rotation.x = camera.position.z*f*0.4;
   }
 
+  function setHover(obj){
+    if(obj===hoverObj) return;
+    if(hoverObj){ hoverObj.scale.x=1; hoverObj.scale.z=1; }
+    hoverObj = obj; hoverEase = 1;
+  }
+
+  function pulseObject(obj, strength, dur){
+    if(!obj) return;
+    pulses.push({ obj, start:performance.now(), dur:dur||820, s:strength||0.4 });
+  }
+
   function highlightSpoke(obj){
     if(!obj) return;
-    const sc=obj.scale; sc.set(1.35,1,1.35); setTimeout(()=>{ sc.set(1,1,1); }, 820);
+    if(reducedMotion){ return; }
+    pulseObject(obj, 0.4, 820);
+  }
+
+  function tickPulses(){
+    if(reducedMotion) return;
+    const now=performance.now();
+    for(let i=pulses.length-1;i>=0;i--){
+      const pu=pulses[i]; const p=(now-pu.start)/pu.dur;
+      if(p>=1){ pu.obj.scale.x=1; pu.obj.scale.z=1; pulses.splice(i,1); continue; }
+      const k = 1 + pu.s * Math.sin(p*Math.PI); // smooth swell then settle
+      pu.obj.scale.x=k; pu.obj.scale.z=k;
+    }
+  }
+
+  function tickCameraAnim(){
+    if(!camAnim.active || !camera || !controls) return;
+    const p = Math.min(1, (performance.now() - camAnim.start) / camAnim.dur);
+    const e = easeOutCubic(p);
+    camera.position.lerpVectors(camAnim.from, camAnim.to, e);
+    controls.target.copy(camAnim.tgt);
+    camera.lookAt(controls.target);
+    if(p>=1){ camAnim.active=false; controls.enabled=true; controls.update(); }
   }
 
   function updateHelixLive(buckets){
@@ -418,7 +541,10 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
       const cratio=(b.crTok+b.cwTok)/Math.max(1,b.inTok+b.outTok+b.crTok+b.cwTok);
       let spLen=0.35 + ((b.cost/maxC)+cratio*0.35)*5.2;
       const t=Math.max(0.05,(b.msgs||1)/maxM); const r0=0.07+t*0.18;
-      s.spoke.scale.set(1, spLen / (s.baseLen||spLen), 1);
+      // Only write length (scale.y) here — x/z are owned by hover ease /
+      // tickPulses, which run every frame; hard-resetting them on each live
+      // refresh would snap-then-reinflate mid-hover/pulse (flicker).
+      s.spoke.scale.y = spLen / (s.baseLen||spLen);
       s.spoke.position.set( hx + Math.cos(th)*(spLen*0.5), hy + Math.sin(th)*(spLen*0.5), hz );
       if (b.cost > avgC*1.7) s.spoke.material.color.setHex(0xf59e0b);
       if(s.tip) s.tip.position.set( hx + Math.cos(th)*spLen, hy + Math.sin(th)*spLen , hz );
@@ -430,9 +556,27 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     if(!bucketsCache.length) return;
     if(forceBuild || !spokes.length) buildHelix(bucketsCache);
     if(reducedMotion){ return; }
-    animState.active=true; animState.start=performance.now(); animState.buckets=bucketsCache;
+    // dramatic tier: 1100ms coil-in with staggered turns
+    animState.active=true; animState.start=performance.now(); animState.dur=1100; animState.buckets=bucketsCache;
     const L=28;
     spokes.forEach((s,i)=>{ if(s.spoke){ s.spoke.scale.y=0.02; s.spoke.position.z = (i/spokes.length)*L*0.1; } });
+
+    // Camera eases from a slightly pulled-back, lifted pose to the framed one
+    // captured by buildHelix's frameContent(). Controls are parked during the
+    // glide so OrbitControls damping doesn't fight the lerp.
+    if(camera && controls){
+      camAnim.to.copy(camera.position);
+      camAnim.tgt.copy(controls.target);
+      const dist = camAnim.to.distanceTo(controls.target);
+      const dir = camAnim.to.clone().sub(controls.target).normalize();
+      camAnim.from.copy(camAnim.to).addScaledVector(dir, dist * 0.32);
+      camAnim.from.y += 2.2;
+      camAnim.start = performance.now();
+      camAnim.active = true;
+      controls.enabled = false;
+      camera.position.copy(camAnim.from);
+      camera.lookAt(controls.target);
+    }
   }
 
   function applyAnim(){
@@ -442,9 +586,10 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     spokes.forEach((s,i)=>{
       if(!s.spoke) return;
       const ip = Math.max(0, Math.min(1, (p * n - i) / Math.max(1,n*0.7) ));
-      s.spoke.scale.y = 0.02 + ip * 0.98;
+      const ease = easeOutCubic(ip); // deliberate per-turn draw-in
+      s.spoke.scale.y = 0.02 + ease * 0.98;
       const pp = (s.idx||i) / Math.max(1,n-1);
-      s.spoke.position.z = pp * L * ip * 0.6 + 0.1;
+      s.spoke.position.z = pp * L * ease * 0.6 + 0.1;
     });
     if(p>=1){ animState.active=false; spokes.forEach(s=>{ if(s.spoke) s.spoke.scale.y=1; }); }
   }
@@ -468,16 +613,36 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
   function animate(){
     raf = requestAnimationFrame(animate);
     if (!renderer || !scene || !camera) return;
-    if (controls) controls.update();
+    const delta = clock ? Math.min(0.05, clock.getDelta()) : 0.016;
+    const elapsed = clock ? clock.elapsedTime : Date.now()*0.001;
+    tickCameraAnim();
+    // Park OrbitControls damping while the entrance lerp owns the camera.
+    if (controls && !camAnim.active) controls.update();
     if(!reducedMotion && starLayers.length){
-      const t=Date.now()*0.001;
       starLayers.forEach((l,i)=>{
-        if(l.material){ l.material.opacity = [0.36,0.58,0.74][i] + Math.sin(t*(l.userData.f||1.8)+(l.userData.ph||0))*0.09; l.material.needsUpdate=true; }
-        if(l.userData.rot) l.rotation.y += l.userData.rot * (i?0.6:1);
+        if(l.material){ l.material.opacity = [0.36,0.58,0.74][i] + Math.sin(elapsed*(l.userData.f||1.8)+(l.userData.ph||0))*0.09; l.material.needsUpdate=true; }
+        if(l.userData.rot) l.rotation.y += l.userData.rot * (i?0.6:1) * delta * 60;
       });
     }
     applyAnim();
-    if(!reducedMotion && helixGroup) helixGroup.rotation.y += 0.00018;
+    // Frame-rate-independent idle: continuous slow spin + gentle breathing.
+    // Spin about helixIdleCenter (the content's mass center, captured in
+    // buildHelix) rather than the group's own local origin — the origin sits
+    // at the coil base while content mass is centered at z~L/2, so spinning
+    // about the origin alone would orbit the visible coil off-center over
+    // long idles. Reuses the existing position Vector3 (no per-frame allocs).
+    if(!reducedMotion && helixGroup){
+      const dAngle = 0.0108 * delta;
+      helixGroup.position.sub(helixIdleCenter).applyAxisAngle(AXIS_Y, dAngle).add(helixIdleCenter);
+      helixGroup.rotation.y += dAngle;
+      helixGroup.scale.setScalar(1 + Math.sin(elapsed * 0.7) * 0.01);
+    }
+    if(!reducedMotion && hoverObj){
+      hoverEase += (1.16 - hoverEase) * Math.min(1, delta * 9);
+      hoverObj.scale.x = hoverEase; hoverObj.scale.z = hoverEase;
+    }
+    if(!reducedMotion && coreFlowMat) coreFlowMat.uniforms.u_time.value = elapsed;
+    tickPulses();
     renderer.render(scene, camera);
   }
 
@@ -497,6 +662,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     clearScene();
     if (renderer) renderer.dispose();
     renderer = scene = camera = controls = root = tooltip = null;
+    hoverObj = null; pulses = []; camAnim.active = false;
     mounted = false;
   }
 

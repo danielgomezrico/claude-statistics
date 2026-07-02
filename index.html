@@ -906,6 +906,9 @@ function recompute(){
   safe("heatmap",   renderHeatmap);
   safe("modelTime", renderModelOverTime);
   safe("pricingCity",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.pricingCity) window.ClaudeMeter.pricingCity.render(STATE.events); });
+  safe("constellation3d",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.threeConstellation) window.ClaudeMeter.threeConstellation.render(STATE.events); });
+  safe("helix3d",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.threeHelix) window.ClaudeMeter.threeHelix.render(STATE.events); });
+  safe("flow3d",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.threeFlow) window.ClaudeMeter.threeFlow.render(STATE.events); });
   safe("cache",     renderCacheCluster);
   safe("reconcile", renderReconcile);
   safe("topSess",   renderTopSessions);
@@ -1258,7 +1261,6 @@ function renderOverview(){
   }
 
   const map = new Map();
-  const isInt = (window.ClaudeMeter && window.ClaudeMeter.parserCore && window.ClaudeMeter.parserCore.isInternalAgentProject) || (p => ["subagents",".worktree",".agents"].indexOf(p)>=0);
   for (const e of ev){
     const key = e.attribution || e.project;
     if (isInt(key)) continue;
@@ -1586,6 +1588,7 @@ window.__cmRecompute = recompute;
 <script src="src/js/drift-diff.js"></script>
 <script src="src/js/idb-cache.js"></script>
 <script type="module" src="src/js/pricing-city.js"></script>
+<script src="src/js/fullscreen.js"></script>
 
 <script>
 (function(){

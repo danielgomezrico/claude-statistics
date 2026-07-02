@@ -29,7 +29,25 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
   let tourStep = -1;
   let tourPts = [];
   let lastDown = null;
-  let reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  let clock = null;
+  let entrance = { t:0, dur:0 };
+  let entrancePlayed = false;
+  let selT = 0;
+  let instDirty = false;
+  let glowMat = null;
+  let hovered = null;
+  let hoverT = 0;
+  let sceneHost = null;
+  let minimapEl = null;
+  let tourBtnEl = null;
+  const glowUniforms = { uTime: { value: 0 } };
+  const _dmy = new THREE.Object3D(); // reused scratch — no per-frame allocation in the render loop
+  reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  // Deliberate easing curves (no linear motion). Cubic for camera moves, back for tasteful pop-in.
+  const easeOutCubic = x => 1 - Math.pow(1 - x, 3);
+  const easeInOutCubic = x => x < 0.5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2;
+  const easeOutBack = x => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3*Math.pow(x-1, 3) + c1*Math.pow(x-1, 2); };
 
   function fmt$(n){ return "$"+(n||0).toLocaleString(undefined,{maximumFractionDigits:2,minimumFractionDigits:2}); }
   function fmtInt(n){ return (n||0).toLocaleString(); }
@@ -69,6 +87,22 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     return pts;
   }
 
+  // Soft radial sprite for additive glow halos. Fresh per build so disposeObject can
+  // free it on rebuild/destroy without touching a shared texture.
+  function makeGlowTexture(){
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const ctx = c.getContext('2d');
+    const g = ctx.createRadialGradient(32,32,0,32,32,32);
+    g.addColorStop(0.0,'rgba(255,255,255,1)');
+    g.addColorStop(0.22,'rgba(255,255,255,0.55)');
+    g.addColorStop(0.5,'rgba(255,255,255,0.18)');
+    g.addColorStop(1.0,'rgba(255,255,255,0)');
+    ctx.fillStyle = g; ctx.fillRect(0,0,64,64);
+    const tex = new THREE.CanvasTexture(c);
+    if (THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
+
   function mount(el){
     if (!el) return;
     root = el;
@@ -85,15 +119,17 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
     root.querySelector("[data-cstl-reset]").addEventListener("click", function(){
       if (!camera || !controls) return;
-      if (pointsGroup && pointsGroup.userData && pointsGroup.userData.center) {
-        const c = pointsGroup.userData.center;
-        flyTo({ _x:c.x, _y:c.y, _z:c.z });
+      tourStep = -1;
+      if (pointsGroup && pointsGroup.children.length) {
+        frameContent({ fly:true });
       } else {
+        fly = null; controls.enabled = true;
         camera.position.set(14, 9, 16); controls.target.set(0, 3, 0); controls.update();
       }
     });
 
     mounted = true;
+    entrancePlayed = false;
     reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     resizeObserver = new ResizeObserver(()=>resize());
     resizeObserver.observe(stage());
@@ -116,7 +152,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
     renderer = new THREE.WebGLRenderer({ antialias:true, alpha:false, preserveDrawingBuffer:true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.setSize(host.clientWidth, host.clientHeight);
+    renderer.setSize(host.clientWidth, host.clientHeight, false);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     host.innerHTML = "";
     host.appendChild(renderer.domElement);
@@ -127,6 +163,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     mini.width=68; mini.height=68;
     mini.addEventListener("click", onMinimapClick);
     host.appendChild(mini);
+    sceneHost = host;
+    minimapEl = mini;
 
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -134,12 +172,18 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     controls.minDistance = 3;
     controls.maxDistance = 48;
     controls.maxPolarAngle = Math.PI * 0.92;
-    controls.addEventListener('change', ()=>{ if(starLayers[2]) starLayers[2].rotation.y = -camera.position.z * 0.0005; if(starLayers[0]) starLayers[0].rotation.x = camera.position.x * -0.0003; });
-    host.addEventListener('dblclick', ()=>{ if(!camera||!controls)return; const c=pointsGroup&&pointsGroup.userData&&pointsGroup.userData.center; if(c){camera.position.set(c.x+14,c.y+9,c.z+16);controls.target.set(c.x,c.y,c.z);}else{camera.position.set(14,9,16);controls.target.set(0,3,0);} controls.update(); });
+    controls.addEventListener('change', onControlsChange);
+    host.addEventListener('dblclick', onDblClick);
 
-    const p1 = new THREE.PointLight(0x9aa4b8, .7, 120); p1.position.set(18, 22, -14); scene.add(p1);
-    const p2 = new THREE.PointLight(0x7f8aa0, .55, 90); p2.position.set(-16, 9, 21); scene.add(p2);
-    const p3 = new THREE.PointLight(0xaab8cc, .45, 110); p3.position.set(5, -8, -22); scene.add(p3);
+    // Soft cosmic fill so form-shadowed sides keep a touch of body (depth reads better).
+    scene.add(new THREE.AmbientLight(0x202a40, 0.6));
+    // Key + fill, neutral cool.
+    const p1 = new THREE.PointLight(0x9aa4b8, .75, 120); p1.position.set(18, 22, -14); scene.add(p1);
+    const p2 = new THREE.PointLight(0x7f8aa0, .5, 90); p2.position.set(-16, 9, 21); scene.add(p2);
+    const p3 = new THREE.PointLight(0xaab8cc, .42, 110); p3.position.set(5, -8, -22); scene.add(p3);
+    // Colored rim accents sculpt silhouettes and give the cluster a cosmic temperature shift.
+    const rimWarm = new THREE.PointLight(0xff9a63, .42, 80); rimWarm.position.set(-24, 5, -12); scene.add(rimWarm);
+    const rimCool = new THREE.PointLight(0x4f93ff, .4, 95); rimCool.position.set(22, -3, 18); scene.add(rimCool);
 
     pointsGroup = new THREE.Group();
     scene.add(pointsGroup);
@@ -155,8 +199,12 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
     host.addEventListener("pointerdown", onPointerDown);
     host.addEventListener("pointerup", onPointerUp);
+    host.addEventListener("pointermove", onPointerMove);
+    host.addEventListener("pointerleave", onPointerLeave);
     const tb = root.querySelector("[data-cstl-tour]");
     if (tb) tb.addEventListener("click", startTour);
+    tourBtnEl = tb;
+    clock = new THREE.Clock();
     animate();
   }
 
@@ -190,12 +238,15 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
       disposeObject(child);
     }
     if (inst) { disposeObject(inst); inst = null; }
+    glowMat = null;
     pointsGroup.userData = {};
   }
 
   function buildConstellation(filtered){
     clearScene();
     selected = null;
+    hovered = null; hoverT = 0;
+    if (renderer) renderer.domElement.style.cursor = "";
 
     const sessSet = new Set(filtered.map(e=>e.session));
     const usePerMsg = sessSet.size < 100;
@@ -253,8 +304,10 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
       starLayers[2].material.color.setRGB(t*0.92, t*0.96, t*1.18);
     }
 
-    const geo = new THREE.SphereGeometry(0.1, 9, 9);
-    const mat = new THREE.MeshPhongMaterial({ shininess:7, emissive:0x111a22 });
+    const geo = new THREE.SphereGeometry(0.1, 14, 14);
+    // Glossier surface so the colored rim lights catch a crisp specular highlight; the
+    // faint cool emissive keeps spheres from ever going fully black in the cosmic dark.
+    const mat = new THREE.MeshPhongMaterial({ shininess:48, specular:0x3b5570, emissive:0x0b1622 });
     inst = new THREE.InstancedMesh(geo, mat, pts.length);
 
     const dummy = new THREE.Object3D();
@@ -262,6 +315,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     let cidx = 0;
     const getCol = (m) => { if (!modelToCol.has(m)) modelToCol.set(m, MODEL_COLORS[cidx++ % MODEL_COLORS.length]); return modelToCol.get(m); };
 
+    const playEntrance = !reducedMotion && !entrancePlayed;
     const xs = [], ys = [], zs = [];
     pts.forEach((p, i) => {
       const x = ((p.ts - minT) / rT - 0.5) * 18;
@@ -273,19 +327,58 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
       dummy.position.set(x, y, z);
       const tokC = (p.tokens||1) + (p.cost||0)*120;
       const r = Math.max(0.04, Math.min(0.42, Math.log1p(tokC / 480) * 0.21));
-      dummy.scale.set(r, r, r);
+      // Start collapsed so the entrance can pop each star in; static when not animating.
+      const startR = playEntrance ? 0.0001 : r;
+      dummy.scale.set(startR, startR, startR);
       dummy.updateMatrix();
       inst.setMatrixAt(i, dummy.matrix);
-      inst.setColorAt(i, new THREE.Color(getCol(p.model)));
+      const colHex = getCol(p.model);
+      inst.setColorAt(i, new THREE.Color(colHex));
+      p._colHex = colHex;
       const rec = (p.ts - minT) / rT;
       p._pulseSpd = 0.9 + cr * 1.8 + (1-rec)*0.6;
       p._pulsePh = i * 0.7;
       p._baseR = r;
+      // Stagger entrance along the time axis (left-to-right sweep).
+      p._entOff = pts.length > 1 ? i / (pts.length - 1) : 0;
     });
     inst.instanceMatrix.needsUpdate = true;
     if (inst.instanceColor) inst.instanceColor.needsUpdate = true;
     inst.userData.points = pts;
     pointsGroup.add(inst);
+
+    // Additive colored glow halos behind the spheres (fake bloom via sprites — 1 draw call,
+    // depth-aware via sizeAttenuation, per-point shimmer via a tiny onBeforeCompile inject).
+    {
+      const ggeo = new THREE.BufferGeometry();
+      const gpos = new Float32Array(pts.length*3);
+      const gcol = new Float32Array(pts.length*3);
+      const gscl = new Float32Array(pts.length);
+      const gph  = new Float32Array(pts.length);
+      const tmpC = new THREE.Color();
+      for(let i=0; i<pts.length; i++){
+        const p = pts[i];
+        gpos[i*3]=p._x||0; gpos[i*3+1]=p._y||0; gpos[i*3+2]=p._z||0;
+        tmpC.set(p._colHex || 0xffffff);
+        gcol[i*3]=tmpC.r*0.9; gcol[i*3+1]=tmpC.g*0.9; gcol[i*3+2]=tmpC.b*0.9;
+        gscl[i] = Math.max(0.12, (p._baseR||0.1) * 0.8);
+        gph[i] = i * 0.55;
+      }
+      ggeo.setAttribute('position', new THREE.BufferAttribute(gpos,3));
+      ggeo.setAttribute('color', new THREE.BufferAttribute(gcol,3));
+      ggeo.setAttribute('aScale', new THREE.BufferAttribute(gscl,1));
+      ggeo.setAttribute('aPhase', new THREE.BufferAttribute(gph,1));
+      glowMat = new THREE.PointsMaterial({ size:1.0, map:makeGlowTexture(), vertexColors:true, transparent:true, opacity:0.0, depthWrite:false, blending:THREE.AdditiveBlending, sizeAttenuation:true });
+      glowMat.userData.baseOp = 0.9;
+      glowMat.onBeforeCompile = (sh)=>{
+        sh.uniforms.uTime = glowUniforms.uTime;
+        sh.vertexShader = 'attribute float aScale;\nattribute float aPhase;\nuniform float uTime;\n' +
+          sh.vertexShader.replace('gl_PointSize = size;', 'gl_PointSize = size * aScale * (1.0 + 0.16 * sin(uTime + aPhase));');
+      };
+      const glow = new THREE.Points(ggeo, glowMat);
+      glow.renderOrder = -1; // draw behind the lit spheres so the cores stay crisp
+      pointsGroup.add(glow);
+    }
 
     if (pts.length > 4){
       const ogeo = new THREE.BufferGeometry();
@@ -306,12 +399,11 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
     addGridAndAxes(xs, ys, zs);
 
-    const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
-    const cy = (Math.min(...ys) + Math.max(...ys)) / 2 * 0.7;
-    const cz = (Math.min(...zs) + Math.max(...zs)) / 2;
-    pointsGroup.userData.center = {x:cx, y:cy, z:cz};
-
-    autoFit(xs, ys, zs);
+    // Kick off the entrance: stars stagger in + camera eases from pulled-back. Once only.
+    selT = 0; instDirty = true;
+    entrance = { t:0, dur: playEntrance ? 0.95 : 0 };
+    entrancePlayed = true;
+    frameContent({ entrance: playEntrance, preserveDir: !playEntrance });
     drawMinimap(pts);
     updateInspector(null, pts.length);
   }
@@ -339,18 +431,63 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     const axz = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 13), amat); axz.position.set(-9.2, 0.04, 0); pointsGroup.add(axz);
   }
 
-  function autoFit(xs, ys, zs){
-    if (!camera || !controls || !xs.length || fly) return;
-    const minx = Math.min(...xs), maxx = Math.max(...xs);
-    const miny = Math.min(...ys), maxy = Math.max(...ys);
-    const minz = Math.min(...zs), maxz = Math.max(...zs);
-    const cx = (minx + maxx) / 2, cy = (miny + maxy) / 2 * 0.65, cz = (minz + maxz) / 2;
-    const dx = Math.max(0.1, maxx - minx), dy = Math.max(2, maxy - miny), dz = Math.max(1, maxz - minz);
-    const size = Math.max(dx, dy, dz);
-    const dist = size * 2.1 / Math.tan((camera.fov * 0.5 * Math.PI) / 180);
-    camera.position.set(cx + dist * 0.55, cy + dist * 0.38, cz + dist * 0.95);
-    controls.target.set(cx, cy, cz);
-    controls.update();
+  // Fit the camera to the actual rendered content's bounding sphere so the whole
+  // constellation stays centered and framed at any aspect ratio (narrow column or
+  // large/fullscreen). opts.fly animates the move; opts.preserveDir keeps the current
+  // viewing angle (used on resize so orbit isn't reset).
+  function frameContent(opts){
+    opts = opts || {};
+    if (!camera || !controls || !pointsGroup || !pointsGroup.children.length) return;
+    const box = new THREE.Box3().setFromObject(pointsGroup);
+    if (box.isEmpty()) return;
+    const center = box.getCenter(new THREE.Vector3());
+    const radius = box.getBoundingSphere(new THREE.Sphere()).radius || 8;
+
+    // Fit to the tighter of vertical/horizontal fov so nothing is clipped on a narrow column.
+    const vfov = (camera.fov * Math.PI) / 180;
+    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * (camera.aspect || 1));
+    const fitFov = Math.min(vfov, hfov);
+    const dist = (radius * 1.18) / Math.sin(fitFov / 2);
+
+    // Allow the camera far enough out for narrow aspects (overrides the static maxDistance).
+    controls.maxDistance = Math.max(48, dist * 1.6);
+
+    let dir;
+    if (opts.preserveDir){
+      dir = camera.position.clone().sub(controls.target);
+      if (dir.lengthSq() < 1e-4) dir.set(0.55, 0.38, 0.95);
+      dir.normalize();
+    } else {
+      dir = new THREE.Vector3(0.55, 0.38, 0.95).normalize();
+    }
+    const camPos = center.clone().add(dir.clone().multiplyScalar(dist));
+
+    if (opts.entrance){
+      // Dramatic ease-in: snap to a pulled-back vantage, then glide to the framed pose.
+      const back = center.clone().add(dir.clone().multiplyScalar(dist * 1.85));
+      camera.position.copy(back);
+      controls.target.copy(center);
+      controls.update();
+      startFly(camPos, center, 1.1, easeOutCubic);
+    } else if (opts.fly){
+      startFly(camPos, center, 0.92, easeInOutCubic);
+    } else {
+      camera.position.copy(camPos);
+      controls.target.copy(center);
+      controls.update();
+    }
+  }
+
+  // Delta-time eased camera move; centralizes every fly so easing/timing stay cohesive.
+  function startFly(toPos, toTgt, durSec, ease, onDone){
+    if (!camera || !controls) return;
+    fly = {
+      fromPos: camera.position.clone(), toPos: toPos.clone(),
+      fromTgt: controls.target.clone(), toTgt: toTgt.clone(),
+      t: 0, dur: Math.max(0.001, durSec || 0.9),
+      ease: ease || easeInOutCubic, onDone: onDone || null
+    };
+    controls.enabled = false;
   }
 
   function updateInspector(pt, total){
@@ -371,8 +508,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     if (!camera || !controls || !pt) return;
     const cx = pt._x || 0, cy=(pt._y||0)*0.7, cz = pt._z || 0;
     const dist = 7.5;
-    fly = { tx: cx, ty: cy, tz: cz, px: cx+dist*0.6, py:cy+dist*0.5, pz:cz+dist*0.9, pr:0, dur:920, onDone: null };
-    controls.enabled = false;
+    startFly(new THREE.Vector3(cx+dist*0.6, cy+dist*0.5, cz+dist*0.9), new THREE.Vector3(cx, cy, cz), 0.95, easeInOutCubic);
   }
   function startTour(){
     if (!inst || !inst.userData.points) return;
@@ -439,9 +575,39 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     if (hits.length && typeof hits[0].instanceId === "number"){
       const i = hits[0].instanceId;
       const pt = (inst.userData.points || [])[i];
-      if (pt){ selected = pt; updateInspector(pt); flyTo(pt); }
+      if (pt){ selected = pt; selT = 0; instDirty = true; updateInspector(pt); flyTo(pt); }
     }
     lastDown = null;
+  }
+  // Hover affordance: reuses the existing pick pipeline (event-driven, not per-frame).
+  // Skipped while orbit-dragging so it never fights the camera.
+  function onPointerMove(ev){
+    if (!renderer || !camera || !inst || lastDown) return;
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    const hits = raycaster.intersectObject(inst);
+    let hit = null;
+    if (hits.length && typeof hits[0].instanceId === "number") hit = (inst.userData.points || [])[hits[0].instanceId] || null;
+    if (hit !== hovered){
+      hovered = hit; hoverT = 0; instDirty = true;
+      renderer.domElement.style.cursor = hit ? "pointer" : "";
+    }
+  }
+  function onPointerLeave(){
+    if (hovered){ hovered = null; instDirty = true; }
+    if (renderer) renderer.domElement.style.cursor = "";
+  }
+  function onControlsChange(){
+    if (starLayers[2]) starLayers[2].rotation.y = -camera.position.z * 0.0005;
+    if (starLayers[0]) starLayers[0].rotation.x = camera.position.x * -0.0003;
+  }
+  function onDblClick(){
+    if (!camera || !controls) return;
+    tourStep = -1; fly = null; controls.enabled = true;
+    if (pointsGroup && pointsGroup.children.length) { frameContent({}); }
+    else { camera.position.set(14,9,16); controls.target.set(0,3,0); controls.update(); }
   }
 
   function resize(){
@@ -457,15 +623,37 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);
+    // Re-fit so content stays centered/framed at the new aspect (narrow column or fullscreen).
+    // Skip while a fly/tour is animating so we don't fight it; keep the user's orbit angle.
+    if (!fly) frameContent({ preserveDir:true });
   }
 
   function animate(){
     raf = requestAnimationFrame(animate);
     if (!renderer || !scene || !camera) return;
-    const t = Date.now() * 0.001;
+    // Skip rendering work while the tab is hidden; drain the clock so the first visible
+    // frame doesn't see a huge accumulated delta.
+    if (typeof document !== "undefined" && document.hidden){ if (clock) clock.getDelta(); return; }
+    // Delta-time so all motion is frame-rate independent; clamp to absorb tab-refocus jumps.
+    const dt = clock ? Math.min(clock.getDelta(), 0.05) : 0.016;
+    const t = clock ? clock.elapsedTime : Date.now() * 0.001;
     if (controls) controls.update();
-    if (pointsGroup) pointsGroup.rotation.y += reducedMotion ? 0 : 0.00055;
+
+    // Entrance progress (eased) drives star fade + staggered point pop-in.
+    if (entrance.dur > 0 && entrance.t < entrance.dur) entrance.t += dt;
+    const ep = entrance.dur > 0 ? Math.min(1, entrance.t / entrance.dur) : 1;
+    const entranceActive = entrance.dur > 0 && entrance.t < entrance.dur;
+
+    if (pointsGroup) pointsGroup.rotation.y += reducedMotion ? 0 : 0.04 * dt;
+    // Drive the glow-halo shimmer (frozen under reduced motion) and ease its opacity in.
+    glowUniforms.uTime.value = reducedMotion ? 0 : t;
+    if (glowMat){
+      const gbase = glowMat.userData.baseOp || 0.9;
+      const breath = reducedMotion ? 1 : (0.92 + Math.sin(t * 0.9) * 0.08);
+      glowMat.opacity = gbase * easeOutCubic(ep) * breath;
+    }
     if (starLayers.length){
+      const fade = reducedMotion ? 1 : easeOutCubic(ep);
       if(!reducedMotion){
         starLayers[0].rotation.y = t * 0.003;
         starLayers[1].rotation.y = -t * 0.0018;
@@ -474,34 +662,54 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
       starLayers.forEach((l,i)=>{
         const m = l.material;
         const base = l.userData.baseOp || 0.6;
-        m.opacity = base + Math.sin(t * (1.6 + i*0.7) + (l.userData.phases? l.userData.phases[0]:0)) * 0.09;
+        const tw = reducedMotion ? 0 : Math.sin(t * (1.2 + i*0.5) + (l.userData.phases? l.userData.phases[0]:0)) * 0.07;
+        m.opacity = (base + tw) * fade;
       });
     }
     if (fly && camera && controls){
-      fly.pr = Math.min(1, fly.pr + 0.026);
-      camera.position.x += (fly.px - camera.position.x) * 0.11;
-      camera.position.y += (fly.py - camera.position.y) * 0.11;
-      camera.position.z += (fly.pz - camera.position.z) * 0.11;
-      controls.target.x += (fly.tx - controls.target.x)*0.14;
-      controls.target.y += (fly.ty - controls.target.y)*0.14;
-      controls.target.z += (fly.tz - controls.target.z)*0.14;
-      if (fly.pr > 0.999){
+      fly.t += dt;
+      const u = Math.min(1, fly.t / fly.dur);
+      const e = fly.ease(u);
+      camera.position.lerpVectors(fly.fromPos, fly.toPos, e);
+      controls.target.lerpVectors(fly.fromTgt, fly.toTgt, e);
+      if (u >= 1){
         const done = fly.onDone; fly = null; controls.enabled = true; controls.update();
         if (done) done();
         else if (tourStep >=0 && tourPts.length){ tourStep++; if(tourStep < tourPts.length) flyTo(tourPts[tourStep]); else tourStep=-1; }
       }
     }
-    if (inst && inst.userData.points && !reducedMotion){
-      const dmy = new THREE.Object3D(); const pts = inst.userData.points;
+    if (selected) selT += dt;
+    if (hovered) hoverT += dt;
+    // Run the per-instance pass when something is actually moving; otherwise a single
+    // one-shot write (instDirty) keeps the reduced-motion / settled path cheap and static.
+    const selBoost = selected ? (reducedMotion ? 1 : easeOutBack(Math.min(1, selT / 0.45))) : 0;
+    const hovBoost = hovered ? (reducedMotion ? 1 : easeOutCubic(Math.min(1, hoverT / 0.22))) : 0;
+    const animatingInst = !reducedMotion || entranceActive || instDirty || (selected && selT < 0.6) || (hovered && hoverT < 0.4);
+    if (inst && inst.userData.points && animatingInst){
+      const dmy = _dmy; const pts = inst.userData.points;
       for(let i=0; i<pts.length; i++){
         const p = pts[i]; if(!p._baseR) continue;
-        const s = p._baseR * (1 + Math.sin(t * (p._pulseSpd||1.1) + (p._pulsePh||i)) * 0.085);
+        // Staggered ease-out-back pop-in along the sweep.
+        let entS = 1;
+        if (ep < 1 && !reducedMotion){
+          const local = Math.max(0, Math.min(1, ep * 1.6 - (p._entOff || 0) * 0.6));
+          entS = easeOutBack(local);
+        }
+        const twinkle = reducedMotion ? 1 : (1 + Math.sin(t * (p._pulseSpd||1.1) + (p._pulsePh||i)) * 0.07);
+        let s = p._baseR * entS * twinkle;
+        if (p === selected){
+          const breath = reducedMotion ? 0 : Math.sin(t * 3.0) * 0.06;
+          s += p._baseR * (selBoost * 0.28 + breath);
+        } else if (p === hovered){
+          s += p._baseR * hovBoost * 0.16; // lighter cue than selection
+        }
         dmy.position.set(p._x||0, p._y||0, p._z||0);
         dmy.scale.set(s,s,s);
         dmy.updateMatrix();
         inst.setMatrixAt(i, dmy.matrix);
       }
       inst.instanceMatrix.needsUpdate = true;
+      instDirty = false;
     }
     renderer.render(scene, camera);
   }
@@ -519,11 +727,32 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
   function destroy(){
     if (raf) cancelAnimationFrame(raf);
     if (resizeObserver) resizeObserver.disconnect();
+    if (controls){
+      controls.removeEventListener('change', onControlsChange);
+      controls.dispose();
+    }
+    if (sceneHost){
+      sceneHost.removeEventListener("pointerdown", onPointerDown);
+      sceneHost.removeEventListener("pointerup", onPointerUp);
+      sceneHost.removeEventListener("pointermove", onPointerMove);
+      sceneHost.removeEventListener("pointerleave", onPointerLeave);
+      sceneHost.removeEventListener("dblclick", onDblClick);
+    }
+    if (minimapEl) minimapEl.removeEventListener("click", onMinimapClick);
+    if (tourBtnEl) tourBtnEl.removeEventListener("click", startTour);
     starLayers.forEach(l => { scene && scene.remove(l); disposeObject(l); });
     starLayers = [];
     clearScene();
     if (renderer) renderer.dispose();
     renderer = scene = camera = controls = root = null;
+    sceneHost = null; minimapEl = null; tourBtnEl = null;
+    clock = null;
+    fly = null;
+    selected = null;
+    hovered = null; hoverT = 0;
+    glowMat = null;
+    entrance = { t:0, dur:0 };
+    entrancePlayed = false;
     mounted = false;
   }
 

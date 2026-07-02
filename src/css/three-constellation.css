@@ -4,13 +4,16 @@
 .cstl-title h2{margin:0 0 4px;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 .cstl-title p{margin:0;color:var(--muted);font-size:12px;max-width:760px}
 .cstl-controls{display:flex;gap:8px;align-items:center}
-.cstl-stage{position:relative;min-height:420px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#000}
-.cstl-stage canvas{display:block;width:100%;height:100%;touch-action:none}
+.cstl-stage{position:relative;min-height:500px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#000}
+.cstl-stage canvas{display:block;width:100%;height:100%;max-height:none;touch-action:none;cursor:grab;animation:cstl-fade-in .7s cubic-bezier(.22,.61,.36,1) both}
+.cstl-stage canvas:active{cursor:grabbing}
+.cstl-stage:focus-visible{outline:2px solid #6ea8ff;outline-offset:-2px}
+@keyframes cstl-fade-in{from{opacity:0}to{opacity:1}}
 .cstl-inspector{display:grid;grid-template-columns:1fr;gap:8px;margin-top:4px}
 .pcity-empty,.cstl-empty{min-height:220px;display:grid;place-items:center;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:10px;background:#000;font-size:12px}
 @media (prefers-reduced-motion:reduce){.cstl-stage canvas{animation:none}}
 .card.fullscreen .cstl-stage{background:#000!important}
-@media (max-width:900px){.cstl-stage{min-height:340px}}
+@media (max-width:900px){.cstl-stage{min-height:360px}}
 .cstl-minimap{position:absolute;bottom:8px;right:8px;width:68px;height:68px;border:1px solid #222;background:#000;border-radius:3px;cursor:pointer;opacity:.85}
 .cstl-minimap:hover{opacity:1;border-color:#444}
 .cstl-tour-btn{font-size:11px;padding:2px 7px}

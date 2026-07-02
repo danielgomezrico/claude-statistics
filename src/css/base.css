@@ -26,3 +26,104 @@
   outline-offset:2px;
   border-radius:4px;
 }
+
+/* ──────────────────────────────────────────────────────────────────────
+ * Full-screen card modal — driven by src/js/fullscreen.js.
+ * Clicking the injected ⛶ button adds `.fullscreen` to the card and
+ * `has-fs` to <body>. There were no rules for either, so the button did
+ * nothing visible. These rules float the card into a viewport-filling
+ * modal over a dark backdrop; Esc / ✕ remove the classes to restore it.
+ * ────────────────────────────────────────────────────────────────────── */
+
+/* Positioned ancestor for .fs-toggle's absolute placement. Loses to
+ * .card.fullscreen{position:fixed} below by selector specificity, so the
+ * fullscreen card still floats — this only anchors the toggle button
+ * in the normal grid layout. (Previously set inline via JS, which won by
+ * specificity and pinned the "fullscreen" card to its grid column.) */
+.card{position:relative}
+
+/* The ⛶ / ✕ toggle floats in the top-right of every enhanced card. */
+.fs-toggle{
+  position:absolute;
+  top:10px;
+  right:10px;
+  z-index:20;
+  width:30px;
+  height:30px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0;
+  font-size:15px;
+  line-height:1;
+  color:var(--text,#e7ebf3);
+  background:var(--panel2,#171b24);
+  border:1px solid var(--border,#262b38);
+  border-radius:8px;
+  cursor:pointer;
+  opacity:.7;
+  transition:opacity .15s ease, background .15s ease;
+}
+.fs-toggle:hover{opacity:1;background:var(--panel,#12151c)}
+
+/* Lock background scroll while a card is maximised. */
+body.has-fs{overflow:hidden}
+
+/* Dark, blurred backdrop sitting behind the floating modal. */
+body.has-fs::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.82);
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+  z-index:9000;
+}
+
+/* Promote the active card into a floating, ~95vw/95vh modal above the backdrop. */
+.card.fullscreen{
+  position:fixed;
+  inset:2.5vh 2.5vw;
+  width:auto;
+  height:auto;
+  max-width:none;
+  max-height:none;
+  margin:0;
+  z-index:9001;
+  padding:24px;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  background:var(--panel,#12151c);
+  border:1px solid var(--border,#262b38);
+  border-radius:14px;
+  box-shadow:0 24px 80px rgba(0,0,0,.6);
+}
+/* Keep the toggle pinned and clickable above the (now larger) canvas. */
+.card.fullscreen > .fs-toggle{top:16px;right:16px;z-index:9002}
+
+/* The 3D mount wrappers must flex so their inner stage can grow to fill the
+ * modal. Scoped to the known mount ids so plain chart cards stay untouched. */
+.card.fullscreen > #threeConstellation,
+.card.fullscreen > #threeHelix,
+.card.fullscreen > #threeFlow,
+.card.fullscreen > #threeUniverse,
+.card.fullscreen > #pricingCity{
+  flex:1 1 auto;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
+
+/* Three.js stages expand to fill the remaining modal height; their
+ * height:100% <canvas> then grows with them. */
+.card.fullscreen .cstl-stage,
+.card.fullscreen .helix-stage,
+.card.fullscreen .tflow-stage,
+.card.fullscreen .universe-stage,
+.card.fullscreen .pcity-stage{
+  flex:1 1 auto;
+  min-height:0;
+  height:auto;
+}
