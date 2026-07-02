@@ -208,6 +208,26 @@
       <button type="button" class="btn" id="exitDemoBtn">Exit demo</button>
     </div>
 
+    <!-- PROJECT NAME CLEANUP · strip words from every project label (top-level, always visible) -->
+    <div class="card" id="projectCleanupBar" style="margin-bottom:14px">
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div style="flex:1 1 320px;min-width:0">
+          <label for="projectStripWords" style="display:block;font-size:12px;font-weight:600;margin-bottom:4px">🏷️ Clean project names</label>
+          <div class="muted" style="font-size:11px;margin-bottom:6px">
+            Words to strip from every project label — comma or space separated, case-insensitive per path-segment.
+            e.g. <code>Users dan projects Volumes</code> turns <code>Users-dan-projects-my-app</code> into <code>my-app</code>.
+          </div>
+          <input type="text" id="projectStripWords" spellcheck="false" autocomplete="off"
+            style="width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:8px;background:var(--panel,#171b26);color:inherit;border:1px solid var(--border,#262b38);border-radius:6px"
+            placeholder="Users, dan, projects, Volumes, corsair-dan" />
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button type="button" class="btn" id="projectStripApply">Apply</button>
+          <button type="button" class="btn" id="projectStripReset">Reset</button>
+        </div>
+      </div>
+    </div>
+
     <!-- OVERVIEW · all-time summary of everything + top projects (always visible) -->
     <section class="overview" id="overview" aria-label="Overview — all-time summary">
       <div class="ov-head">
@@ -490,6 +510,7 @@
       <div class="muted" style="font-size:11px;margin-top:8px">Match = substring of model id (first match wins). Edit to update all charts.</div>
     </details>
 
+
   </div>
 
   <div class="footer">
@@ -543,6 +564,57 @@ function priceFor(model){
 
 const STATE = { events: [], charts: {}, bucket: "day" };
 window.STATE = STATE;
+
+// --- Project name cleanup: strip user-specified words from every project name.
+// Runs on the main thread at render time (recompute) so the words can change
+// without re-parsing. e.projectRaw preserves the derived name; e.project holds
+// the cleaned label used by all charts/tables.
+const PROJECT_STRIP = { key: "cm.project.strip-words", words: [] };
+function tokenize(s){ return String(s||"").split(/[\s,;\-\/_]+/).filter(Boolean); }
+function loadStripWords(){
+  try {
+    var raw = localStorage.getItem(PROJECT_STRIP.key);
+    PROJECT_STRIP.words = raw ? tokenize(raw) : [];
+  } catch(e){ PROJECT_STRIP.words = []; }
+  return PROJECT_STRIP.words;
+}
+function saveStripWords(text){
+  PROJECT_STRIP.words = tokenize(text);
+  try {
+    if (PROJECT_STRIP.words.length) localStorage.setItem(PROJECT_STRIP.key, PROJECT_STRIP.words.join(" "));
+    else localStorage.removeItem(PROJECT_STRIP.key);
+  } catch(e){}
+}
+function cleanProjectName(raw){
+  var tokens = tokenize(raw);
+  if (!tokens.length) return String(raw||"unknown");
+  if (!PROJECT_STRIP.words.length) return tokens.join("-");
+  var strip = {};
+  PROJECT_STRIP.words.forEach(function(w){ strip[w.toLowerCase()] = true; });
+  var kept = tokens.filter(function(t){ return !strip[t.toLowerCase()]; });
+  return kept.length ? kept.join("-") : tokens.join("-");
+}
+function normalizeProjectNames(events){
+  for (var i=0;i<events.length;i++){
+    var e = events[i];
+    if (e.projectRaw == null) e.projectRaw = e.project;
+    e.project = cleanProjectName(e.projectRaw);
+  }
+}
+loadStripWords();
+(function wireProjectStrip(){
+  var input = document.getElementById("projectStripWords");
+  var applyBtn = document.getElementById("projectStripApply");
+  var resetBtn = document.getElementById("projectStripReset");
+  if (!input) return;
+  input.value = PROJECT_STRIP.words.join(", ");
+  // Apply only on explicit action (button click or Enter) — never on keystroke,
+  // so typing doesn't re-render the whole page mid-word.
+  var apply = function(){ saveStripWords(input.value); if (STATE.events.length) recompute(); };
+  if (applyBtn) applyBtn.addEventListener("click", apply);
+  input.addEventListener("keydown", function(ev){ if (ev.key === "Enter"){ ev.preventDefault(); apply(); } });
+  if (resetBtn) resetBtn.addEventListener("click", function(){ input.value = ""; saveStripWords(""); if (STATE.events.length) recompute(); });
+})();
 
 const drop = document.getElementById("drop");
 const filesInput = document.getElementById("files");
@@ -884,12 +956,38 @@ function fmtTok(n){ if(n>=1e9)return(n/1e9).toFixed(2)+"B"; if(n>=1e6)return(n/1
 function destroyChart(key){ if(STATE.charts[key]){ STATE.charts[key].destroy(); STATE.charts[key]=null; } }
 function safe(name, fn){ try { fn(); } catch(e){ console.error("["+name+"]", e); } }
 
+// Heavy sections (3D WebGL scenes, canvas viz) compute only when scrolled near
+// the viewport. On big imports this keeps recompute() from blocking the main
+// thread rebuilding every offscreen scene at once — the page stays responsive
+// and each section builds as you reach it. Re-runs immediately for sections
+// already on-screen (e.g. filter changes); re-arms the rest. Falls back to an
+// immediate render when IntersectionObserver or the element is unavailable.
+const _lazyReg = new Map();
+function lazyRender(elId, name, fn){
+  const el = document.getElementById(elId);
+  if (!el || typeof IntersectionObserver === "undefined"){ safe(name, fn); return; }
+  let rec = _lazyReg.get(elId);
+  if (!rec){
+    rec = { visible:false, pending:false, name, fn };
+    rec.io = new IntersectionObserver(function(entries){
+      rec.visible = entries[entries.length-1].isIntersecting;
+      if (rec.visible && rec.pending){ rec.pending = false; safe(rec.name, rec.fn); }
+    }, { rootMargin: "400px" });
+    rec.io.observe(el);
+    _lazyReg.set(elId, rec);
+  }
+  rec.name = name; rec.fn = fn; // refresh closures so they capture the latest STATE/filters
+  if (rec.visible){ safe(name, fn); }
+  else { rec.pending = true; }
+}
+
 const commonAxes = {
   x:{ticks:{color:"#8a93a6",maxRotation:0,autoSkip:true,maxTicksLimit:12},grid:{color:"#262b38"}},
   y:{ticks:{color:"#8a93a6",callback:v=>"$"+v},grid:{color:"#262b38"}}
 };
 
 function recompute(){
+  normalizeProjectNames(STATE.events);
   for (const e of STATE.events){
     const p = priceFor(e.model);
     e.cost = (e.inTok*p.in + e.outTok*p.out + e.crTok*p.cacheRead + e.cwTok*p.cacheWrite)/1e6;
@@ -903,19 +1001,19 @@ function recompute(){
   safe("model",     renderModelChart);
   safe("stack",     renderStack);
   safe("cum",       renderCumulative);
-  safe("heatmap",   renderHeatmap);
+  lazyRender("heatmap", "heatmap", renderHeatmap);
   safe("modelTime", renderModelOverTime);
-  safe("pricingCity",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.pricingCity) window.ClaudeMeter.pricingCity.render(STATE.events); });
-  safe("constellation3d",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.threeConstellation) window.ClaudeMeter.threeConstellation.render(STATE.events); });
-  safe("helix3d",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.threeHelix) window.ClaudeMeter.threeHelix.render(STATE.events); });
-  safe("flow3d",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.threeFlow) window.ClaudeMeter.threeFlow.render(STATE.events); });
+  lazyRender("pricingCity", "pricingCity",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.pricingCity) window.ClaudeMeter.pricingCity.render(STATE.events); });
+  lazyRender("threeConstellation", "constellation3d",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.threeConstellation) window.ClaudeMeter.threeConstellation.render(STATE.events); });
+  lazyRender("threeHelix", "helix3d",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.threeHelix) window.ClaudeMeter.threeHelix.render(STATE.events); });
+  lazyRender("threeFlow", "flow3d",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.threeFlow) window.ClaudeMeter.threeFlow.render(STATE.events); });
   safe("cache",     renderCacheCluster);
   safe("reconcile", renderReconcile);
   safe("topSess",   renderTopSessions);
   safe("monthTbl",  renderMonthTable);
   safe("projTbl",   renderProjTable);
   safe("roiCards",  ()=>{ if (window.ClaudeMeter && window.ClaudeMeter.roiCards) window.ClaudeMeter.roiCards.render(STATE.events); });
-  safe("sunburst",  ()=>{
+  lazyRender("agentSunburst", "sunburst",  ()=>{
     const m = document.getElementById("agentSunburst");
     const api = window.ClaudeMeter && window.ClaudeMeter.sunburst;
     if (!m || !api) return;
@@ -924,7 +1022,7 @@ function recompute(){
   });
   safe("runaway",   ()=>{ const m = document.getElementById("runawayList"); const api = window.ClaudeMeter && window.ClaudeMeter.runawayAlerts; if (m && api) api.render(m, STATE.events); });
   safe("anomaly",   ()=>{ const m = document.getElementById("anomalyList"); const api = window.ClaudeMeter && window.ClaudeMeter.anomalyFeed; if (m && api) api.render(m, STATE.events); });
-  safe("toolTree",  ()=>{ const m = document.getElementById("toolTreemap"); const api = window.ClaudeMeter && window.ClaudeMeter.toolTreemap; if (m && api) api.render(m, STATE.events); });
+  lazyRender("toolTreemap", "toolTree",  ()=>{ const m = document.getElementById("toolTreemap"); const api = window.ClaudeMeter && window.ClaudeMeter.toolTreemap; if (m && api) api.render(m, STATE.events); });
   safe("hookHealth",()=>{ const m = document.getElementById("hookHealth"); const api = window.ClaudeMeter && window.ClaudeMeter.hookHealth; if (m && api) api.render(m, STATE.events); });
   safe("extThinking",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.extThinking) window.ClaudeMeter.extThinking.render(); });
   safe("serviceTier",()=>{ if (window.ClaudeMeter && window.ClaudeMeter.serviceTier) window.ClaudeMeter.serviceTier.render(); });

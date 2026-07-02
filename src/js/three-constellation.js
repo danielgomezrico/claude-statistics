@@ -23,6 +23,11 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
   let pointsGroup = null;
   let inst = null;
   let resizeObserver = null;
+  let visObserver = null;
+  // Whether the stage is on (or near) the viewport. When false the RAF loop
+  // stays alive but skips all per-frame WebGL/matrix work — off-screen scenes
+  // must not burn GPU/CPU (4 of these run on one long-scroll page).
+  let onScreen = true;
   let reducedMotion = false;
   let starLayers = [];
   let fly = null;
@@ -133,6 +138,12 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     resizeObserver = new ResizeObserver(()=>resize());
     resizeObserver.observe(stage());
+    if (typeof IntersectionObserver !== "undefined"){
+      visObserver = new IntersectionObserver(function(entries){
+        onScreen = entries[entries.length - 1].isIntersecting;
+      }, { rootMargin: "200px" });
+      visObserver.observe(stage());
+    }
     render(window.STATE && window.STATE.events ? window.STATE.events : []);
   }
 
@@ -145,7 +156,9 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
-    scene.fog = new THREE.Fog(0x000000, 28, 68);
+    // Push fog out so points stay crisp (not washed) even at the larger camera
+    // distances used when framing a wide constellation in fullscreen.
+    scene.fog = new THREE.Fog(0x000000, 46, 120);
 
     camera = new THREE.PerspectiveCamera(48, host.clientWidth / host.clientHeight, 0.1, 120);
     camera.position.set(14, 9, 16);
@@ -304,10 +317,14 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
       starLayers[2].material.color.setRGB(t*0.92, t*0.96, t*1.18);
     }
 
-    const geo = new THREE.SphereGeometry(0.1, 14, 14);
-    // Glossier surface so the colored rim lights catch a crisp specular highlight; the
-    // faint cool emissive keeps spheres from ever going fully black in the cosmic dark.
-    const mat = new THREE.MeshPhongMaterial({ shininess:48, specular:0x3b5570, emissive:0x0b1622 });
+    // Unit sphere so the per-instance scale IS the world radius (0.13–0.6). The old
+    // 0.1 base multiplied that down to ~0.06 world ≈ 2px — the spheres were near-
+    // invisible and the soft glow sprites were all you actually saw (the "blur").
+    const geo = new THREE.SphereGeometry(1, 16, 16);
+    // Self-lit crisp colored dots: each session reads as a bright, sharply-defined
+    // point in its model color, independent of the dim scene lighting that used to
+    // leave the spheres near-black and let the soft glow halos read as blur.
+    const mat = new THREE.MeshBasicMaterial({ toneMapped:false, fog:false });
     inst = new THREE.InstancedMesh(geo, mat, pts.length);
 
     const dummy = new THREE.Object3D();
@@ -326,7 +343,10 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
       xs.push(x); ys.push(y); zs.push(z);
       dummy.position.set(x, y, z);
       const tokC = (p.tokens||1) + (p.cost||0)*120;
-      const r = Math.max(0.04, Math.min(0.42, Math.log1p(tokC / 480) * 0.21));
+      // Small, distinct point per session. The unit-sphere geometry means this value IS
+      // the world radius; keep it modest so hundreds of clustered sessions read as separate
+      // stars instead of merging into one solid blob (a smaller/larger cost still varies it).
+      const r = Math.max(0.05, Math.min(0.24, Math.log1p(tokC / 480) * 0.11));
       // Start collapsed so the entrance can pop each star in; static when not animating.
       const startR = playEntrance ? 0.0001 : r;
       dummy.scale.set(startR, startR, startR);
@@ -347,38 +367,11 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     inst.userData.points = pts;
     pointsGroup.add(inst);
 
-    // Additive colored glow halos behind the spheres (fake bloom via sprites — 1 draw call,
-    // depth-aware via sizeAttenuation, per-point shimmer via a tiny onBeforeCompile inject).
-    {
-      const ggeo = new THREE.BufferGeometry();
-      const gpos = new Float32Array(pts.length*3);
-      const gcol = new Float32Array(pts.length*3);
-      const gscl = new Float32Array(pts.length);
-      const gph  = new Float32Array(pts.length);
-      const tmpC = new THREE.Color();
-      for(let i=0; i<pts.length; i++){
-        const p = pts[i];
-        gpos[i*3]=p._x||0; gpos[i*3+1]=p._y||0; gpos[i*3+2]=p._z||0;
-        tmpC.set(p._colHex || 0xffffff);
-        gcol[i*3]=tmpC.r*0.9; gcol[i*3+1]=tmpC.g*0.9; gcol[i*3+2]=tmpC.b*0.9;
-        gscl[i] = Math.max(0.12, (p._baseR||0.1) * 0.8);
-        gph[i] = i * 0.55;
-      }
-      ggeo.setAttribute('position', new THREE.BufferAttribute(gpos,3));
-      ggeo.setAttribute('color', new THREE.BufferAttribute(gcol,3));
-      ggeo.setAttribute('aScale', new THREE.BufferAttribute(gscl,1));
-      ggeo.setAttribute('aPhase', new THREE.BufferAttribute(gph,1));
-      glowMat = new THREE.PointsMaterial({ size:1.0, map:makeGlowTexture(), vertexColors:true, transparent:true, opacity:0.0, depthWrite:false, blending:THREE.AdditiveBlending, sizeAttenuation:true });
-      glowMat.userData.baseOp = 0.9;
-      glowMat.onBeforeCompile = (sh)=>{
-        sh.uniforms.uTime = glowUniforms.uTime;
-        sh.vertexShader = 'attribute float aScale;\nattribute float aPhase;\nuniform float uTime;\n' +
-          sh.vertexShader.replace('gl_PointSize = size;', 'gl_PointSize = size * aScale * (1.0 + 0.16 * sin(uTime + aPhase));');
-      };
-      const glow = new THREE.Points(ggeo, glowMat);
-      glow.renderOrder = -1; // draw behind the lit spheres so the cores stay crisp
-      pointsGroup.add(glow);
-    }
+    // NOTE: the additive glow-halo sprite layer that used to live here was the source of
+    // the "blurry blobs" — its onBeforeCompile size inject rendered ~15px soft halos over
+    // every session regardless of material.size, drowning the crisp spheres. Removed so the
+    // constellation reads as sharp, distinct points. glowMat stays null; animate() guards it.
+    glowMat = null;
 
     if (pts.length > 4){
       const ogeo = new THREE.BufferGeometry();
@@ -392,7 +385,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
       if (oposs.length){
         ogeo.setAttribute('position', new THREE.Float32BufferAttribute(oposs,3));
         ogeo.setAttribute('color', new THREE.Float32BufferAttribute(ocols,3));
-        const ol = new THREE.LineSegments(ogeo, new THREE.LineBasicMaterial({vertexColors:true, transparent:true, opacity:0.28, blending:THREE.AdditiveBlending}));
+        const ol = new THREE.LineSegments(ogeo, new THREE.LineBasicMaterial({vertexColors:true, transparent:true, opacity:0.1, blending:THREE.AdditiveBlending}));
         pointsGroup.add(ol);
       }
     }
@@ -634,6 +627,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     // Skip rendering work while the tab is hidden; drain the clock so the first visible
     // frame doesn't see a huge accumulated delta.
     if (typeof document !== "undefined" && document.hidden){ if (clock) clock.getDelta(); return; }
+    // Skip all rendering work when scrolled off-screen; keep the loop alive so it resumes instantly.
+    if (!onScreen){ if (clock) clock.getDelta(); return; }
     // Delta-time so all motion is frame-rate independent; clamp to absorb tab-refocus jumps.
     const dt = clock ? Math.min(clock.getDelta(), 0.05) : 0.016;
     const t = clock ? clock.elapsedTime : Date.now() * 0.001;
@@ -648,7 +643,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     // Drive the glow-halo shimmer (frozen under reduced motion) and ease its opacity in.
     glowUniforms.uTime.value = reducedMotion ? 0 : t;
     if (glowMat){
-      const gbase = glowMat.userData.baseOp || 0.9;
+      const gbase = glowMat.userData.baseOp != null ? glowMat.userData.baseOp : 0.9;
       const breath = reducedMotion ? 1 : (0.92 + Math.sin(t * 0.9) * 0.08);
       glowMat.opacity = gbase * easeOutCubic(ep) * breath;
     }
@@ -727,6 +722,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
   function destroy(){
     if (raf) cancelAnimationFrame(raf);
     if (resizeObserver) resizeObserver.disconnect();
+    if (visObserver) visObserver.disconnect();
     if (controls){
       controls.removeEventListener('change', onControlsChange);
       controls.dispose();

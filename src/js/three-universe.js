@@ -14,6 +14,9 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
   let uGroup = null, starField = null, dusts = [], nodeMeshes = [], edgeGroup = null;
   let nodeById = {}, adj = {};
   let resizeObserver = null;
+  let visObserver = null;
+  // See three-constellation.js: skip per-frame work while scrolled off-screen.
+  let onScreen = true;
   let pulsePhase = 0;
   let searchTerm = "";
   let lastInteract = Date.now();
@@ -94,6 +97,12 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     mounted = true;
     resizeObserver = new ResizeObserver(()=>resize());
     resizeObserver.observe(st);
+    if (typeof IntersectionObserver !== "undefined" && st){
+      visObserver = new IntersectionObserver(function(entries){
+        onScreen = entries[entries.length - 1].isIntersecting;
+      }, { rootMargin: "200px" });
+      visObserver.observe(st);
+    }
     render(window.STATE && window.STATE.events ? window.STATE.events : []);
   }
 
@@ -747,6 +756,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
   function animate(){
     raf = requestAnimationFrame(animate);
     if(!renderer || !scene || !camera) return;
+    // Skip rendering while tab hidden or scrolled off-screen; keep the loop alive to resume instantly.
+    if((typeof document !== "undefined" && document.hidden) || !onScreen) return;
     const t = Date.now() * 0.001;
     if(controls){
       if(camTarget){

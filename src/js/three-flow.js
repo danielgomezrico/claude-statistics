@@ -44,6 +44,9 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
   let pointer = new THREE.Vector2();
   let flowGroup = null;
   let resizeObserver = null;
+  let visObserver = null;
+  // See three-constellation.js: skip per-frame work while scrolled off-screen.
+  let onScreen = true;
   let particles = []; // {mesh, curve, speed, phase}
   let tubeMeshes = [];
   let starLayers = [];
@@ -236,6 +239,12 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
     reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     resizeObserver = new ResizeObserver(()=>resize());
     resizeObserver.observe(stage());
+    if (typeof IntersectionObserver !== "undefined"){
+      visObserver = new IntersectionObserver(function(entries){
+        onScreen = entries[entries.length - 1].isIntersecting;
+      }, { rootMargin: "200px" });
+      visObserver.observe(stage());
+    }
     render(window.STATE && window.STATE.events ? window.STATE.events : []);
   }
 
@@ -655,6 +664,8 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
   function animate(){
     raf = requestAnimationFrame(animate);
     if (!renderer || !scene || !camera) return;
+    // Skip rendering while tab hidden or scrolled off-screen; drain clock to avoid a delta jump.
+    if ((typeof document !== "undefined" && document.hidden) || !onScreen){ clock.getDelta(); return; }
     const dt = Math.min(0.05, clock.getDelta()); // clamp so a backgrounded tab can't jump motion
 
     // --- entrance choreography: camera ease + staggered node pop + tube draw-in ---
